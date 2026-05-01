@@ -38,8 +38,8 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
-    /* Compact base size */
-    font-size: 14px;
+    /* Ultra Compact base size */
+    font-size: 13px;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
 }
@@ -90,7 +90,7 @@ header {
 }
 
 .logo {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     /* Fixní velikost */
     font-weight: 400;
     letter-spacing: 0.15em;
@@ -126,7 +126,7 @@ header {
 }
 
 .allowance-display {
-    font-size: 4rem;
+    font-size: 3.5rem;
     /* Kompaktnější číslo */
     font-weight: 300;
     line-height: 1.1;
@@ -211,7 +211,7 @@ header {
 }
 
 .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 600;
 }
 
