@@ -38,8 +38,8 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
-    /* Ultra Compact base size */
-    font-size: 13px;
+    /* Ultra-Mini base size */
+    font-size: 10px;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
 }
@@ -372,9 +372,9 @@ header {
     background: rgba(10, 10, 10, 0.95);
     border-top: 1.5px solid var(--glass-border);
     width: 100%;
-    max-width: 900px;
-    border-radius: 40px 40px 0 0;
-    padding: clamp(40px, 8vh, 60px) clamp(24px, 5vw, 60px);
+    max-width: 600px; /* Zmenšeno z 900px */
+    border-radius: 30px 30px 0 0;
+    padding: 30px; /* 50% zmenšení paddingu */
     transform: translateY(0);
     transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
     box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.8);
@@ -388,7 +388,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 60px;
+    margin-bottom: 30px; /* Sníženo o 50 % */
 }
 
 .modal-header h3 {
@@ -397,8 +397,8 @@ header {
 }
 
 .close-btn svg {
-    width: clamp(32px, 5vw, 48px);
-    height: clamp(32px, 5vw, 48px);
+    width: 24px;
+    height: 24px;
 }
 
 .close-btn {
@@ -427,7 +427,7 @@ header {
 }
 
 .amount-group input {
-    font-size: clamp(64px, 12vw, 120px);
+    font-size: 3rem; /* Zmenšeno o 50 % */
     font-weight: 300;
     width: 100%;
     background: transparent;
@@ -728,8 +728,8 @@ header {
 }
 
 .category-btn {
-    width: clamp(72px, 12vw, 110px);
-    height: clamp(72px, 12vw, 110px);
+    width: 60px; /* Zmenšeno o 50 % */
+    height: 60px;
     border-radius: 50%;
     background: var(--glass-bg);
     border: 1.5px solid var(--glass-border);
@@ -1159,6 +1159,19 @@ header {
     gap: 8px;
 }
 
+.calendar-modal-card {
+    font-size: 15px !important; /* Vracíme čitelnost pro kalendář */
+    max-width: 400px;
+}
+
+.calendar-modal-card h3 {
+    font-size: 18px !important;
+}
+
+.calendar-modal-card .calendar-day {
+    font-size: 14px !important;
+}
+
 .calendar-day {
     aspect-ratio: 1;
     display: flex;
@@ -1166,7 +1179,6 @@ header {
     justify-content: center;
     cursor: pointer;
     border-radius: 8px;
-    font-size: 14px;
     transition: all var(--transition);
     border: 1px solid transparent;
 }
