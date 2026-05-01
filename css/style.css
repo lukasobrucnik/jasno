@@ -3,22 +3,23 @@
     --fg: #ffffff;
     --fg-muted: rgba(255, 255, 255, 0.5);
     --accent: #FF0000;
-    
+
     /* Glassmorphism Variables */
     --glass-bg: rgba(255, 255, 255, 0.04);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-blur: blur(24px);
-    
+
     /* Typography - Scaled Up */
     --font-heading: 'DotGothic16', monospace;
     --font-body: 'Inter', sans-serif;
-    
+
     /* Responsive Spacing & Sizes */
-    --padding-base: 24px; /* Fixní padding místo clampu */
+    --padding-base: 24px;
+    /* Fixní padding místo clampu */
     --border-radius-lg: 32px;
     --border-radius-md: 20px;
     --border-radius-sm: 12px;
-    
+
     --transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -36,7 +37,7 @@ body {
     font-family: var(--font-body);
     min-height: 100vh;
     overflow-x: hidden;
-    background-image: radial-gradient(circle at 50% -20%, rgba(255,255,255,0.05) 0%, transparent 60%);
+    background-image: radial-gradient(circle at 50% -20%, rgb(255, 255, 255) 0%, transparent 60%);
     /* Set standard base size */
     font-size: 15px;
     -webkit-text-size-adjust: 100%;
@@ -55,7 +56,12 @@ body {
 }
 
 /* Typography */
-h1, h2, h3, .section-title, .logo, .stat-label {
+h1,
+h2,
+h3,
+.section-title,
+.logo,
+.stat-label {
     font-family: var(--font-heading);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -63,8 +69,15 @@ h1, h2, h3, .section-title, .logo, .stat-label {
 
 /* Animations */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Header */
@@ -77,7 +90,8 @@ header {
 }
 
 .logo {
-    font-size: 1.8rem; /* Fixní velikost */
+    font-size: 1.8rem;
+    /* Fixní velikost */
     font-weight: 400;
     letter-spacing: 0.15em;
 }
@@ -112,7 +126,8 @@ header {
 }
 
 .allowance-display {
-    font-size: 5rem; /* Stabilní velikost, která se nenafukuje */
+    font-size: 5rem;
+    /* Stabilní velikost, která se nenafukuje */
     font-weight: 300;
     line-height: 1.1;
     margin-bottom: 30px;
@@ -202,7 +217,7 @@ header {
 
 /* Transactions */
 .transactions-section {
-    margin-bottom: 140px; 
+    margin-bottom: 140px;
     flex-grow: 1;
     animation: fadeIn 0.6s ease-out 0.3s both;
 }
@@ -253,8 +268,8 @@ header {
     width: clamp(48px, 8vw, 72px);
     height: clamp(48px, 8vw, 72px);
     border-radius: 50%;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -297,7 +312,8 @@ header {
 /* FAB */
 .fab {
     position: fixed;
-    bottom: 120px; /* Posunuto nad spodní lištu */
+    bottom: 120px;
+    /* Posunuto nad spodní lištu */
     left: 50%;
     transform: translateX(-50%);
     width: clamp(64px, 10vw, 80px);
@@ -309,7 +325,7 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.05);
     cursor: pointer;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
     z-index: 100;
@@ -322,7 +338,7 @@ header {
 
 .fab:hover {
     transform: translateX(-50%) scale(1.1);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 0 2px rgba(255,255,255,0.2);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 .fab:active {
@@ -336,7 +352,7 @@ header {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     display: flex;
@@ -361,7 +377,7 @@ header {
     padding: clamp(40px, 8vh, 60px) clamp(24px, 5vw, 60px);
     transform: translateY(0);
     transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-    box-shadow: 0 -20px 60px rgba(0,0,0,0.8);
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.8);
 }
 
 .modal-overlay.hidden .glass-modal {
@@ -458,7 +474,7 @@ header {
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     z-index: 10;
     white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .amount-suggestion.hidden {
@@ -475,7 +491,7 @@ header {
 
 .amount-suggestion .tab-hint {
     font-size: 11px;
-    background: rgba(255,255,255,0.15);
+    background: rgba(255, 255, 255, 0.15);
     padding: 3px 6px;
     border-radius: 4px;
     color: var(--fg);
@@ -483,7 +499,8 @@ header {
     font-weight: 500;
 }
 
-#tx-note, #fixed-name {
+#tx-note,
+#fixed-name {
     width: 100%;
     background: var(--glass-bg);
     border: 1.5px solid var(--glass-border);
@@ -495,10 +512,11 @@ header {
     transition: border-color var(--transition), background var(--transition);
 }
 
-#tx-note:focus, #fixed-name:focus {
+#tx-note:focus,
+#fixed-name:focus {
     outline: none;
-    border-color: rgba(255,255,255,0.4);
-    background: rgba(255,255,255,0.06);
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 /* Fixed Expenses List in Modal */
@@ -573,7 +591,7 @@ header {
     transition: all 0.3s ease;
 }
 
-.toggle-group input:checked + span {
+.toggle-group input:checked+span {
     background: rgba(255, 255, 255, 0.1);
     color: var(--fg);
     font-weight: 500;
@@ -644,7 +662,8 @@ header {
     padding: 40px 32px;
     transform: scale(0.95);
     transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-    background: rgba(15, 15, 15, 0.95); /* Tmavší podklad pro kontrast */
+    background: rgba(15, 15, 15, 0.95);
+    /* Tmavší podklad pro kontrast */
     border: 1.5px solid var(--glass-border);
 }
 
@@ -689,12 +708,15 @@ header {
     overflow-x: auto;
     gap: 16px;
     padding: 10px 0;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
 }
 
 .category-selector::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    display: none;
+    /* Chrome, Safari, Opera */
 }
 
 .category-option {
@@ -720,7 +742,8 @@ header {
     position: relative;
 }
 
-.category-btn svg, .category-btn img {
+.category-btn svg,
+.category-btn img {
     width: 45%;
     height: 45%;
     pointer-events: none;
@@ -735,16 +758,17 @@ header {
     opacity: 0.8;
 }
 
-.category-option input:checked + .category-btn {
+.category-option input:checked+.category-btn {
     background: var(--fg);
     color: var(--bg);
     border-color: var(--fg);
     transform: scale(1.15);
-    box-shadow: 0 10px 30px rgba(255,255,255,0.2);
+    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
 }
 
-.category-option input:checked + .category-btn img.custom-icon-img {
-    filter: grayscale(1) brightness(0); /* Černá na bílém pozadí při výběru */
+.category-option input:checked+.category-btn img.custom-icon-img {
+    filter: grayscale(1) brightness(0);
+    /* Černá na bílém pozadí při výběru */
     opacity: 1;
 }
 
@@ -791,7 +815,7 @@ header {
 }
 
 .btn-primary:hover {
-    box-shadow: 0 10px 30px rgba(255,255,255,0.1);
+    box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
 }
 
 .btn-primary:active {
@@ -818,8 +842,15 @@ header {
 }
 
 @keyframes tabFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .bottom-nav {
@@ -890,7 +921,8 @@ header {
 }
 
 .doughnut-container {
-    height: 320px; /* Více místa pro koláč a legendu */
+    height: 320px;
+    /* Více místa pro koláč a legendu */
 }
 
 .prediction-warning {
@@ -902,7 +934,8 @@ header {
     display: flex;
     align-items: center;
     gap: 16px;
-    color: var(--accent); /* Nothing Red */
+    color: var(--accent);
+    /* Nothing Red */
     font-weight: 500;
     font-size: 15px;
 }
@@ -989,7 +1022,7 @@ header {
 
 .dropzone:hover {
     border-color: var(--fg-muted);
-    background: rgba(255,255,255,0.02);
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .dropzone p {
@@ -1040,7 +1073,7 @@ header {
 }
 
 .btn-secondary:hover {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
     border-color: var(--fg-muted);
 }
 
@@ -1171,14 +1204,16 @@ header {
         grid-template-columns: repeat(3, 1fr);
         gap: 8px;
     }
+
     .stat-card {
         padding: 16px 8px;
     }
+
     .stat-value {
         font-size: 16px;
     }
+
     .category-selector {
         gap: 8px;
     }
 }
-
