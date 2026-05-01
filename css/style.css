@@ -37,8 +37,8 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     background-image: radial-gradient(circle at 50% -20%, rgba(255,255,255,0.05) 0%, transparent 60%);
-    /* Set base size for REMs */
-    font-size: clamp(16px, 1.2vw, 20px);
+    /* Set stable base size */
+    font-size: 16px;
 }
 
 #app {
@@ -110,7 +110,7 @@ header {
 }
 
 .allowance-display {
-    font-size: clamp(64px, 15vw, 160px);
+    font-size: clamp(60px, 10vw, 120px); /* Zmenšeno z 15vw/160px pro stabilitu */
     font-weight: 300;
     line-height: 1.1;
     margin-bottom: 40px;
