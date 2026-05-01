@@ -14,8 +14,8 @@
     --font-body: 'Inter', sans-serif;
 
     /* Responsive Spacing & Sizes */
-    --padding-base: 24px;
-    /* Fixní padding místo clampu */
+    --padding-base: 16px;
+    /* Kompaktnější okraje */
     --border-radius-lg: 32px;
     --border-radius-md: 20px;
     --border-radius-sm: 12px;
@@ -38,8 +38,8 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
-    /* Set standard base size */
-    font-size: 15px;
+    /* Compact base size */
+    font-size: 14px;
     -webkit-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
 }
@@ -85,7 +85,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: clamp(40px, 8vh, 80px);
+    margin-bottom: 30px; /* Sníženo */
     animation: fadeIn 0.6s ease-out;
 }
 
@@ -114,7 +114,7 @@ header {
 /* Dashboard Sections */
 .hero-section {
     text-align: center;
-    margin-bottom: clamp(60px, 10vh, 120px);
+    margin-bottom: 40px; /* Sníženo */
     animation: fadeIn 0.6s ease-out 0.1s both;
 }
 
@@ -126,8 +126,8 @@ header {
 }
 
 .allowance-display {
-    font-size: 5rem;
-    /* Stabilní velikost, která se nenafukuje */
+    font-size: 4rem;
+    /* Kompaktnější číslo */
     font-weight: 300;
     line-height: 1.1;
     margin-bottom: 30px;
@@ -171,13 +171,13 @@ header {
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: clamp(12px, 3vw, 24px);
-    margin-bottom: clamp(60px, 10vh, 100px);
+    gap: 16px;
+    margin-bottom: 40px; /* Sníženo */
     animation: fadeIn 0.6s ease-out 0.2s both;
 }
 
 .stat-card {
-    padding: clamp(20px, 4vw, 40px) clamp(12px, 2vw, 24px);
+    padding: 24px 16px; /* Kompaktnější karty */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -217,7 +217,7 @@ header {
 
 /* Transactions */
 .transactions-section {
-    margin-bottom: 140px;
+    margin-bottom: 80px; /* Výrazně sníženo pro ušetření místa */
     flex-grow: 1;
     animation: fadeIn 0.6s ease-out 0.3s both;
 }
