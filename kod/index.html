@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JASNO. | Osobní Rozpočet</title>
+
+    <!-- Preconnect for fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- DotGothic16 pro "Nothing" tech vzhled, Inter pro čistá data -->
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <main id="dashboard" class="tab-container" style="padding-bottom: 90px;">
+            <!-- TAB: OVERVIEW -->
+            <div id="tab-overview" class="tab-content active">
+                <!-- HEADER -->
+                <header>
+                    <div class="logo">JASNO.</div>
+                    <div class="date-navigator">
+                        <button class="date-nav-btn" onclick="ui.changeDate(-1)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <div class="date-display-wrapper">
+                            <div class="date-display" id="current-date" onclick="ui.openCalendar()"></div>
+                        </div>
+                        <button class="date-nav-btn" id="next-day-btn" onclick="ui.changeDate(1)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                    </div>
+                </header>
+
+        <!-- MAIN DASHBOARD CONTENT -->
+            <!-- HERO ALLOWANCE -->
+            <section class="hero-section">
+                <h2 class="section-title" id="allowance-title">TENTO MĚSÍC MŮŽEŠ UTRATIT</h2>
+                <div class="allowance-display" id="daily-allowance">0 <span class="currency">Kč</span></div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="allowance-progress"></div>
+                </div>
+            </section>
+
+            <!-- STATS CARDS -->
+            <section class="stats-grid">
+                <div class="glass-card stat-card" onclick="ui.openSetupModal('income')">
+                    <div class="stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v20" />
+                            <path d="m17 5-5-3-5 3" />
+                            <path d="m17 19-5 3-5-3" />
+                            <path d="M2 12h20" />
+                            <path d="m5 7-3 5 3 5" />
+                            <path d="m19 7 3 5-3 5" />
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">PŘÍJMY</div>
+                        <div class="stat-value" id="stat-income">0 Kč</div>
+                    </div>
+                </div>
+                <div class="glass-card stat-card" onclick="ui.openFixedModal()">
+                    <div class="stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="16" height="16" x="4" y="4" rx="2" />
+                            <path d="M9 4v16" />
+                            <path d="M15 4v16" />
+                            <path d="M4 9h16" />
+                            <path d="M4 15h16" />
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">FIXNÍ VÝDAJE</div>
+                        <div class="stat-value" id="stat-fixed">0 Kč</div>
+                    </div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                            <path d="M21 3v5h-5" />
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">ZBÝVÁ V MĚSÍCI</div>
+                        <div class="stat-value" id="stat-remaining">0 Kč</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TRANSACTIONS -->
+            <section class="transactions-section">
+                <div class="section-header">
+                    <h2 class="section-title">POSLEDNÍ TRANSAKCE</h2>
+                    <button class="text-button" onclick="ui.clearData()">RESET DATA</button>
+                </div>
+                <div class="glass-card transactions-list" id="transactions-container">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+        </div>
+
+        <!-- TAB: CHARTS -->
+        <div id="tab-charts" class="tab-content hidden">
+            <h2 class="section-title">ANALYTIKA</h2>
+            <div id="prediction-warning" class="prediction-warning hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                <span id="prediction-text">Tempo útrat je vysoké. Pozor na rozpočet.</span>
+            </div>
+            <div class="glass-card chart-card">
+                <h3>ROČNÍ VÝVOJ ZŮSTATKU</h3>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card chart-card">
+                <h3>POMĚR VÝDAJŮ (TENTO MĚSÍC)</h3>
+                <div class="chart-container doughnut-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: GOALS -->
+        <div id="tab-goals" class="tab-content hidden">
+            <h2 class="section-title">CÍLE</h2>
+            <div class="goals-grid" id="goals-container">
+                <!-- Goals will be rendered here -->
+            </div>
+            <button class="btn-secondary" onclick="ui.openGoalModal()" style="margin-top: 24px; width: 100%;">+ NOVÝ CÍL</button>
+        </div>
+
+        <!-- TAB: IMPORT -->
+        <div id="tab-import" class="tab-content hidden">
+            <h2 class="section-title">IMPORT DAT</h2>
+            <div class="glass-card import-card">
+                <div class="dropzone" id="dropzone" onclick="document.getElementById('csv-input').click()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5; margin-bottom: 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <p>Klikněte nebo přetáhněte CSV výpis</p>
+                    <input type="file" id="csv-input" class="hidden" accept=".csv" onchange="importer.handleFile(event)">
+                </div>
+                <div id="import-preview" class="hidden">
+                    <div class="preview-stats" id="preview-stats"></div>
+                    <div class="preview-actions">
+                        <button class="btn-primary" onclick="importer.confirmImport()">IMPORTOVAT</button>
+                        <button class="btn-secondary" onclick="importer.cancelImport()">ZRUŠIT</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- SPA NAVIGATION -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="ui.switchTab('overview')" id="nav-overview">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <span>Přehled</span>
+        </div>
+        <div class="nav-item" onclick="ui.switchTab('charts')" id="nav-charts">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+            <span>Grafy</span>
+        </div>
+        <div class="nav-item" onclick="ui.switchTab('goals')" id="nav-goals">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <span>Cíle</span>
+        </div>
+        <div class="nav-item" onclick="ui.switchTab('import')" id="nav-import">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            <span>Import</span>
+        </div>
+    </nav>
+
+    <!-- FLOATING ACTION BUTTON CONTAINER -->
+    <div class="fab-container">
+        <button class="fab" onclick="ui.openTransactionModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" x2="12" y1="5" y2="19" />
+                <line x1="5" x2="19" y1="12" y2="12" />
+            </svg>
+        </button>
+    </div>
+
+        <!-- TRANSACTION MODAL (OVERLAY) -->
+        <div id="transaction-modal" class="modal-overlay hidden">
+            <div class="glass-modal">
+                <div class="modal-header">
+                    <h3 id="tx-modal-title">NOVÝ VÝDAJ</h3>
+                    <button class="close-btn" type="button" onclick="ui.closeModals()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" x2="6" y1="6" y2="18" />
+                            <line x1="6" x2="18" y1="6" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="tx-form" onsubmit="ui.submitTransaction(event)">
+                    <div class="input-group amount-group">
+                        <input type="text" id="tx-amount" placeholder="0" inputmode="numeric" required
+                            autocomplete="off" oninput="ui.formatInputField(event)"
+                            onkeydown="ui.handleAmountKeydown(event)">
+                        <span class="currency-addon">Kč</span>
+                        <div id="tx-amount-suggestion" class="amount-suggestion hidden"></div>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="tx-note" placeholder="Za co to bylo? (např. Oběd)" required
+                            autocomplete="off">
+                    </div>
+
+                    <div class="category-container">
+                        <div class="category-selector" id="category-list">
+                            <!-- Categories injected here -->
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">PŘIDAT VÝDAJ</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- INCOME SETUP MODAL (OVERLAY) -->
+        <div id="setup-modal" class="modal-overlay hidden">
+            <div class="glass-modal">
+                <div class="modal-header">
+                    <h3 id="setup-title">NASTAVIT PŘÍJMY</h3>
+                    <button class="close-btn" type="button" onclick="ui.closeModals()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" x2="6" y1="6" y2="18" />
+                            <line x1="6" x2="18" y1="6" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="setup-form" onsubmit="ui.submitSetup(event)">
+                    <div class="input-group amount-group">
+                        <input type="text" id="setup-amount" placeholder="0" inputmode="numeric" required
+                            autocomplete="off" oninput="ui.formatInputField(event); ui.updateTaxDisplay();"
+                            onkeydown="ui.handleAmountKeydown(event)">
+                        <span class="currency-addon">Kč</span>
+                        <div id="setup-amount-suggestion" class="amount-suggestion hidden"></div>
+                    </div>
+
+                    <div id="income-settings-block" class="hidden">
+                        <div class="toggle-group">
+                            <label><input type="radio" name="income-freq" value="daily"><span>Denně</span></label>
+                            <label><input type="radio" name="income-freq" value="weekly"><span>Týdně</span></label>
+                            <label><input type="radio" name="income-freq" value="monthly"
+                                    checked><span>Měsíčně</span></label>
+                        </div>
+
+                        <div class="toggle-group toggle-group-small">
+                            <label><input type="radio" name="tax-mode" value="net" checked
+                                    onchange="ui.updateTaxDisplay()"><span>Čistého</span></label>
+                            <label><input type="radio" name="tax-mode" value="gross"
+                                    onchange="ui.updateTaxDisplay()"><span>Hrubého</span></label>
+                        </div>
+
+                        <div id="tax-animation-box" class="tax-box hidden">
+                            <div class="tax-label">ODHADOVANÁ DAŇ A ODVODY (~20%)</div>
+                            <div class="tax-value" id="tax-value-display">- 0 Kč</div>
+                            <div class="tax-note">Aplikace bude počítat s čistým příjmem.</div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="margin-top: 24px;">ULOŽIT</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- FIXED EXPENSES MODAL (OVERLAY) -->
+        <div id="fixed-setup-modal" class="modal-overlay hidden">
+            <div class="glass-modal" style="max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h3>FIXNÍ VÝDAJE</h3>
+                    <button class="close-btn" type="button" onclick="ui.closeModals()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" x2="6" y1="6" y2="18" />
+                            <line x1="6" x2="18" y1="6" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="fixed-list-container" id="fixed-expenses-list"
+                    style="margin-bottom: 24px; max-height: 30vh; overflow-y: auto; padding-right: 8px;">
+                    <!-- Dynamický obsah -->
+                </div>
+
+                <form id="add-fixed-form" onsubmit="ui.submitFixedExpense(event)"
+                    style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
+                    <h4 style="color: var(--fg-muted); margin-bottom: 16px; font-size: 14px; letter-spacing: 1px;">
+                        PŘIDAT NOVÝ</h4>
+
+                    <div class="input-group">
+                        <input type="text" id="fixed-name" placeholder="Za co? (např. Nájem, Kafe)" required
+                            autocomplete="off">
+                    </div>
+
+                    <div class="input-group amount-group">
+                        <input type="text" id="fixed-amount" placeholder="0" inputmode="numeric" required
+                            autocomplete="off" oninput="ui.formatInputField(event)"
+                            onkeydown="ui.handleAmountKeydown(event)">
+                        <span class="currency-addon">Kč</span>
+                        <div id="fixed-amount-suggestion" class="amount-suggestion hidden"></div>
+                    </div>
+
+                    <div class="toggle-group" style="margin-bottom: 24px;">
+                        <label><input type="radio" name="fixed-freq" value="daily"><span>Denně</span></label>
+                        <label><input type="radio" name="fixed-freq" value="weekly"><span>Týdně</span></label>
+                        <label><input type="radio" name="fixed-freq" value="monthly"
+                                checked><span>Měsíčně</span></label>
+                    </div>
+
+                    <button type="submit" class="btn-primary">PŘIDAT VÝDAJ</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- NEW CATEGORY MODAL (CENTERED) -->
+        <div id="category-name-modal" class="modal-overlay centered-overlay hidden">
+            <div class="glass-card horizontal-modal">
+                <div class="modal-header compact-header">
+                    <h3>NOVÁ KATEGORIE</h3>
+                    <button class="close-btn" type="button" onclick="ui.closeCategoryModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" x2="6" y1="6" y2="18" />
+                            <line x1="6" x2="18" y1="6" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="category-name-form" onsubmit="ui.submitNewCategory(event)">
+                    <div class="input-group">
+                        <input type="text" id="new-category-name" placeholder="Zadejte název kategorie např. Koníčky"
+                            required autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn-primary">PŘIDAT</button>
+                </form>
+            </div>
+        </div>
+        <!-- NEW GOAL MODAL -->
+        <div id="goal-modal" class="modal-overlay hidden">
+            <div class="glass-card centered-modal">
+                <div class="modal-header">
+                    <h3>NOVÝ CÍL</h3>
+                    <button class="close-btn" type="button" onclick="ui.closeModals()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+                    </button>
+                </div>
+                <form onsubmit="ui.submitGoal(event)">
+                    <div class="input-group">
+                        <input type="text" id="goal-name" placeholder="Název cíle (např. iPhone 17)" required autocomplete="off">
+                    </div>
+                    <div class="input-group amount-group">
+                        <input type="text" id="goal-amount" placeholder="Cílová částka" required autocomplete="off" oninput="ui.formatInputField(event)">
+                        <span class="currency-addon">Kč</span>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top: 16px;">PŘIDAT CÍL</button>
+                </form>
+            </div>
+        </div>
+        <!-- CALENDAR MODAL -->
+        <div id="calendar-modal" class="modal-overlay hidden">
+            <div class="glass-card centered-modal calendar-modal-card">
+                <div class="calendar-header">
+                    <button class="date-nav-btn" onclick="ui.prevCalendarMonth()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <h3 id="calendar-month-year">KVĚTEN 2026</h3>
+                    <button class="date-nav-btn" onclick="ui.nextCalendarMonth()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
+                <div class="calendar-weekdays">
+                    <span>Po</span><span>Út</span><span>St</span><span>Čt</span><span>Pá</span><span>So</span><span>Ne</span>
+                </div>
+                <div id="calendar-days" class="calendar-grid">
+                    <!-- Days injected here -->
+                </div>
+                <button class="btn-secondary" style="margin-top: 24px;" onclick="ui.closeModals()">ZAVŘÍT</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/logic.js"></script>
+    <script src="js/importer.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
