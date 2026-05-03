@@ -374,6 +374,7 @@ const charts = {
                 responsive: true,
                 maintainAspectRatio: false,
                 cutout: '62%',
+                layout: { padding: { top: 22, bottom: 10, left: 16, right: 16 } },
                 plugins: {
                     legend: {
                         position: 'bottom',

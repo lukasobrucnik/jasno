@@ -1098,6 +1098,10 @@ header {
     margin-bottom: 16px;
 }
 
+.chart-card.donut-card {
+    padding: 30px 20px;
+}
+
 .chart-title {
     font-size: 0.65rem;
     color: var(--fg-muted);
@@ -1113,7 +1117,7 @@ header {
 }
 
 .doughnut-container {
-    height: 260px;
+    height: 310px;
 }
 
 .prediction-warning {
