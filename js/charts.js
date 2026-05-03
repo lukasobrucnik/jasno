@@ -108,6 +108,10 @@ const charts = {
         if (this.categoryChart) { this.categoryChart.destroy(); this.categoryChart = null; }
 
         const ref = ui.selectedDate;
+        const netIncome = logic.getNetIncome(ref);
+        const fixedTotal = logic.getFixedMonthlyTotal(ref);
+        const totalBudget = netIncome - fixedTotal; // volný rozpočet (základ koláče)
+
         const m = ref.getMonth();
         const y = ref.getFullYear();
         const txs = logic.data.transactions.filter(t => {
@@ -115,24 +119,52 @@ const charts = {
             return d.getMonth() === m && d.getFullYear() === y;
         });
 
-        if (txs.length === 0) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            return;
-        }
-
+        // Seskupit transakce po kategoriích
         const catMap = {};
-        txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+        txs.forEach(t => {
+            catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+        });
 
         const catNames = { food: 'Jídlo', coffee: 'Káva', transport: 'Doprava', entertainment: 'Zábava', health: 'Zdraví', other: 'Ostatní' };
-        const labels = Object.keys(catMap).map(k => {
-            const custom = logic.data.customCategories.find(c => c.id === k);
-            return custom ? custom.name : (catNames[k] || k);
-        });
-        const values = Object.values(catMap);
 
-        // Monochromatic grays
-        const grays = ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.65)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.18)', 'rgba(255,255,255,0.1)'];
+        const labels = [];
+        const values = [];
+        const colors = [];
+
+        // 1. Fixní výdaje — nejtmavší
+        if (fixedTotal > 0) {
+            labels.push('Fixní výdaje');
+            values.push(Math.round(fixedTotal));
+            colors.push('rgba(255,255,255,0.75)');
+        }
+
+        // 2. Transakce podle kategorií — střední tóny
+        const txGrays = [
+            'rgba(255,255,255,0.45)',
+            'rgba(255,255,255,0.35)',
+            'rgba(255,255,255,0.27)',
+            'rgba(255,255,255,0.20)',
+            'rgba(255,255,255,0.14)',
+        ];
+        let grayIdx = 0;
+        Object.entries(catMap).forEach(([cat, amount]) => {
+            const custom = logic.data.customCategories.find(c => c.id === cat);
+            labels.push(custom ? custom.name : (catNames[cat] || cat));
+            values.push(Math.round(amount));
+            colors.push(txGrays[grayIdx % txGrays.length]);
+            grayIdx++;
+        });
+
+        // 3. Zbývající neutracené — jen obrys
+        const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
+        const remaining = totalBudget - totalSpent;
+        if (remaining > 0) {
+            labels.push('Zbývá');
+            values.push(Math.round(remaining));
+            colors.push('rgba(255,255,255,0.06)');
+        }
+
+        if (values.length === 0) return;
 
         const ctx = canvas.getContext('2d');
         this.categoryChart = new Chart(ctx, {
@@ -141,26 +173,31 @@ const charts = {
                 labels,
                 datasets: [{
                     data: values,
-                    backgroundColor: labels.map((_, i) => grays[i % grays.length]),
-                    borderColor: 'rgba(0,0,0,0.3)',
+                    backgroundColor: colors,
+                    borderColor: colors.map((_, i) =>
+                        i === labels.indexOf('Zbývá')
+                            ? 'rgba(255,255,255,0.15)'
+                            : 'rgba(0,0,0,0.4)'
+                    ),
                     borderWidth: 2,
-                    hoverOffset: 6
+                    hoverOffset: 8
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '68%',
+                cutout: '65%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            color: 'rgba(255,255,255,0.5)',
+                            color: 'rgba(255,255,255,0.45)',
                             font: { size: 10 },
-                            padding: 14,
+                            padding: 12,
                             boxWidth: 10,
                             boxHeight: 10,
-                            borderRadius: 2
+                            borderRadius: 2,
+                            filter: (item) => item.text !== 'Zbývá' || remaining > 0
                         }
                     },
                     tooltip: {
