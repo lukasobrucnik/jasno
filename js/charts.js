@@ -37,39 +37,66 @@ const charts = {
     renderTrend() {
         const canvas = document.getElementById('trendChart');
         if (!canvas) return;
-
         if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
 
         const ref = ui.selectedDate;
         const year = ref.getFullYear();
-        const labels = [];
-        const data = [];
+        const curMonth = ref.getMonth();
+        const shortNames = ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čec', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'];
+        const labelsArr = [], fixedData = [], varData = [];
 
-        for (let m = 0; m < 12; m++) {
-            const monthDate = new Date(year, m, 1);
-            const shortNames = ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čec', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'];
-            labels.push(shortNames[m]);
-            data.push(Math.round(logic.getMonthlyTotalSpent(monthDate)));
+        for (let mo = 0; mo < 12; mo++) {
+            const monthDate = new Date(year, mo, 1);
+            labelsArr.push(shortNames[mo]);
+            fixedData.push(Math.round(logic.getFixedMonthlyTotal(monthDate)));
+            varData.push(Math.round(logic.getMonthlyTotalSpent(monthDate)));
         }
+
+        const cur = i => i === curMonth;
+        const fixedBg  = fixedData.map((_, i) => cur(i) ? 'rgba(100,148,255,0.85)' : 'rgba(100,148,255,0.20)');
+        const varBg    = varData.map((_, i)   => cur(i) ? 'rgba(255,168,78,0.85)'  : 'rgba(255,168,78,0.20)');
 
         const ctx = canvas.getContext('2d');
         this.trendChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels,
-                datasets: [{
-                    label: 'Výdaje',
-                    data,
-                    backgroundColor: data.map((_, i) => i === ref.getMonth() ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.15)'),
-                    borderRadius: 4,
-                    borderSkipped: false,
-                }]
+                labels: labelsArr,
+                datasets: [
+                    {
+                        label: 'Fixní výdaje',
+                        data: fixedData,
+                        backgroundColor: fixedBg,
+                        borderRadius: 0,
+                        borderSkipped: false,
+                        stack: 'stack',
+                    },
+                    {
+                        label: 'Příležitostné',
+                        data: varData,
+                        backgroundColor: varBg,
+                        borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                        borderSkipped: false,
+                        stack: 'stack',
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            color: 'rgba(255,255,255,0.38)',
+                            font: { size: 9 },
+                            padding: 12,
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            borderRadius: 2,
+                        }
+                    },
                     tooltip: {
                         backgroundColor: 'rgba(10,10,10,0.95)',
                         borderColor: 'rgba(255,255,255,0.1)',
@@ -78,17 +105,19 @@ const charts = {
                         bodyColor: '#fff',
                         padding: 10,
                         callbacks: {
-                            label: ctx => ui.formatCurrency(ctx.parsed.y)
+                            label: ctx => ` ${ctx.dataset.label}: ${ui.formatCurrency(ctx.parsed.y)}`
                         }
                     }
                 },
                 scales: {
                     x: {
+                        stacked: true,
                         grid: { display: false },
                         ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 } },
                         border: { display: false }
                     },
                     y: {
+                        stacked: true,
                         grid: { color: 'rgba(255,255,255,0.05)' },
                         ticks: {
                             color: 'rgba(255,255,255,0.3)',
@@ -124,28 +153,30 @@ const charts = {
 
         const catNames = { food: 'Jídlo', coffee: 'Káva', transport: 'Doprava', entertainment: 'Zábava', health: 'Zdraví', other: 'Ostatní' };
 
-        const labels = [], values = [], monoColors = [], accentColors = [], glowColors = [];
+        const labels = [], values = [], bgColors = [], glowColors = [];
         const groups = [];
         let idx = 0;
 
         const config = logic.getMonthlyConfig(ref);
         const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
 
-        const fixedAccents = [
-            { bg: 'rgba(74,144,255,0.78)',  glow: '#4A90FF' },
-            { bg: 'rgba(255,107,107,0.78)', glow: '#FF6B6B' },
-            { bg: 'rgba(80,200,120,0.78)',  glow: '#50C878' },
-            { bg: 'rgba(255,215,0,0.78)',   glow: '#FFD700' },
-            { bg: 'rgba(200,100,255,0.78)', glow: '#C864FF' },
-            { bg: 'rgba(255,152,0,0.78)',   glow: '#FF9800' },
+        // Blue family — fixní výdaje
+        const fixedPalette = [
+            { bg: 'rgba(128,168,255,0.82)', glow: '#80A8FF' },
+            { bg: 'rgba(100,143,245,0.82)', glow: '#648FF5' },
+            { bg: 'rgba(76,120,225,0.82)',  glow: '#4C78E1' },
+            { bg: 'rgba(55,98,205,0.82)',   glow: '#3762CD' },
+            { bg: 'rgba(38,78,185,0.82)',   glow: '#264EB9' },
+            { bg: 'rgba(24,60,165,0.82)',   glow: '#183CA5' },
         ];
-        const txAccents = [
-            { bg: 'rgba(255,107,107,0.78)', glow: '#FF6B6B' },
-            { bg: 'rgba(80,200,120,0.78)',  glow: '#50C878' },
-            { bg: 'rgba(255,215,0,0.78)',   glow: '#FFD700' },
-            { bg: 'rgba(200,100,255,0.78)', glow: '#C864FF' },
-            { bg: 'rgba(255,152,0,0.78)',   glow: '#FF9800' },
-            { bg: 'rgba(0,188,212,0.78)',   glow: '#00BCD4' },
+
+        // Amber family — příležitostné výdaje
+        const txPalette = [
+            { bg: 'rgba(255,188,80,0.82)',  glow: '#FFBC50' },
+            { bg: 'rgba(248,162,55,0.82)',  glow: '#F8A237' },
+            { bg: 'rgba(235,138,35,0.82)',  glow: '#EB8A23' },
+            { bg: 'rgba(218,115,20,0.82)',  glow: '#DA7314' },
+            { bg: 'rgba(198,95,10,0.82)',   glow: '#C65F0A' },
         ];
 
         // 1. Fixní výdaje — každá položka zvlášť
@@ -154,32 +185,29 @@ const charts = {
             let amt = fe.amount;
             if (fe.frequency === 'daily') amt *= daysInMonth;
             if (fe.frequency === 'weekly') amt *= (daysInMonth / 7);
-            const accent = fixedAccents[fi % fixedAccents.length];
+            const p = fixedPalette[fi % fixedPalette.length];
             labels.push(fe.name);
             values.push(Math.round(amt));
-            monoColors.push(`rgba(255,255,255,${(0.75 - fi * 0.07).toFixed(2)})`);
-            accentColors.push(accent.bg);
-            glowColors.push(accent.glow);
+            bgColors.push(p.bg);
+            glowColors.push(p.glow);
             fixedIndices.push(idx++);
         });
-        if (fixedIndices.length > 0) groups.push({ type: 'fixed', indices: fixedIndices });
+        if (fixedIndices.length > 0) groups.push({ type: 'fixed', label: 'Fixní výdaje', indices: fixedIndices });
 
-        // 2. Příležitostné výdaje po kategoriích
-        const txGrays = ['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.35)', 'rgba(255,255,255,0.27)', 'rgba(255,255,255,0.20)', 'rgba(255,255,255,0.14)'];
+        // 2. Příležitostné výdaje
         const txIndices = [];
-        let grayIdx = 0, txAIdx = 0;
+        let txPIdx = 0;
         Object.entries(catMap).forEach(([cat, amount]) => {
             const custom = logic.data.customCategories.find(c => c.id === cat);
-            const accent = txAccents[txAIdx % txAccents.length];
+            const p = txPalette[txPIdx % txPalette.length];
             labels.push(custom ? custom.name : (catNames[cat] || cat));
             values.push(Math.round(amount));
-            monoColors.push(txGrays[grayIdx % txGrays.length]);
-            accentColors.push(accent.bg);
-            glowColors.push(accent.glow);
+            bgColors.push(p.bg);
+            glowColors.push(p.glow);
             txIndices.push(idx++);
-            grayIdx++; txAIdx++;
+            txPIdx++;
         });
-        if (txIndices.length > 0) groups.push({ type: 'tx', indices: txIndices });
+        if (txIndices.length > 0) groups.push({ type: 'tx', label: 'Příležitostné', indices: txIndices });
 
         // 3. Zbývá
         const totalSpent = txs.reduce((s, t) => s + t.amount, 0);
@@ -187,8 +215,7 @@ const charts = {
         if (remaining > 0) {
             labels.push('Zbývá');
             values.push(Math.round(remaining));
-            monoColors.push('rgba(255,255,255,0.06)');
-            accentColors.push('rgba(255,255,255,0.06)');
+            bgColors.push('rgba(255,255,255,0.06)');
             glowColors.push('transparent');
         }
 
@@ -217,71 +244,103 @@ const charts = {
                 this._hoveredType = newType;
 
                 const ds = chart.data.datasets[0];
-                const bgArr = [], offsetArr = [], bwArr = [];
+                const offsetArr = [], bwArr = [], borderArr = [];
                 for (let i = 0; i < totalCount; i++) {
                     const g = this._groupForIdx(i);
                     const active = g && g.type === newType;
-                    bgArr.push(active ? accentColors[i] : monoColors[i]);
                     offsetArr.push(active ? 10 : 0);
-                    bwArr.push(active ? 1 : 2);
+                    bwArr.push(active ? 1 : 1.5);
+                    borderArr.push(labels[i] === 'Zbývá' ? 'rgba(255,255,255,0.12)' : active ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.35)');
                 }
-                ds.backgroundColor = bgArr;
                 ds.offset = offsetArr;
                 ds.borderWidth = bwArr;
+                ds.borderColor = borderArr;
                 args.changed = true;
             },
 
-            afterDatasetsDraw(chart) {
-                if (!this._hoveredType) return;
-                const group = groups.find(g => g.type === this._hoveredType);
-                if (!group) return;
-
+            afterDraw(chart) {
                 const ctx = chart.ctx;
                 const meta = chart.getDatasetMeta(0);
+                if (!meta.data.length) return;
+
+                // Glow for hovered group
+                if (this._hoveredType) {
+                    const group = groups.find(g => g.type === this._hoveredType);
+                    if (group) {
+                        ctx.save();
+                        group.indices.forEach(i => {
+                            const arc = meta.data[i];
+                            if (!arc) return;
+                            ctx.shadowBlur = 18;
+                            ctx.shadowColor = glowColors[i];
+                            arc.draw(ctx);
+                        });
+                        ctx.shadowBlur = 0;
+                        ctx.restore();
+                    }
+                }
+
+                // Center text
+                const arc0 = meta.data[0];
+                if (!arc0) return;
+                const cx = arc0.x, cy = arc0.y;
+                const innerR = arc0.innerRadius;
+
                 ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
 
-                // Glow pass — redraw hovered arcs with shadow
-                group.indices.forEach(i => {
-                    const arc = meta.data[i];
-                    if (!arc) return;
-                    ctx.shadowBlur = 16;
-                    ctx.shadowColor = glowColors[i];
-                    arc.draw(ctx);
-                });
-                ctx.shadowBlur = 0;
+                if (this._hoveredType) {
+                    const group = groups.find(g => g.type === this._hoveredType);
+                    if (!group) { ctx.restore(); return; }
 
-                // Connector lines + inline labels
-                group.indices.forEach(i => {
-                    const arc = meta.data[i];
-                    if (!arc || values[i] === 0) return;
-                    const mid = (arc.startAngle + arc.endAngle) / 2;
-                    const r = arc.outerRadius;
-                    const cx = arc.x, cy = arc.y;
-                    const x1 = cx + Math.cos(mid) * (r + 5);
-                    const y1 = cy + Math.sin(mid) * (r + 5);
-                    const x2 = cx + Math.cos(mid) * (r + 22);
-                    const y2 = cy + Math.sin(mid) * (r + 22);
+                    const groupTotal = group.indices.reduce((s, i) => s + values[i], 0);
+                    const isBlue = group.type === 'fixed';
+                    const headerColor = isBlue ? 'rgba(128,168,255,0.6)' : 'rgba(255,188,80,0.6)';
+                    const totalColor  = isBlue ? '#80A8FF' : '#FFBC50';
 
-                    ctx.beginPath();
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.strokeStyle = accentColors[i];
-                    ctx.lineWidth = 1;
-                    ctx.globalAlpha = 0.65;
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
+                    // Header label
+                    ctx.font = `600 9px Inter, sans-serif`;
+                    ctx.fillStyle = headerColor;
+                    ctx.fillText(group.label.toUpperCase(), cx, cy - innerR * 0.52);
 
-                    const right = Math.cos(mid) >= 0;
-                    const lx = x2 + (right ? 4 : -4);
-                    ctx.textAlign = right ? 'left' : 'right';
-                    ctx.textBaseline = 'middle';
-                    ctx.font = '10px Inter, sans-serif';
-                    ctx.fillStyle = accentColors[i];
-                    ctx.fillText(labels[i], lx, y2 - 6);
-                    ctx.font = '9px Inter, sans-serif';
-                    ctx.fillStyle = 'rgba(255,255,255,0.45)';
-                    ctx.fillText(ui.formatCurrency(values[i]), lx, y2 + 6);
-                });
+                    // Total amount
+                    ctx.font = `700 13px Inter, sans-serif`;
+                    ctx.fillStyle = totalColor;
+                    ctx.fillText(ui.formatCurrency(groupTotal), cx, cy - innerR * 0.22);
+
+                    // Item list (up to 5)
+                    const items = group.indices.slice(0, 5);
+                    const lineH = Math.min(13, (innerR * 0.9) / (items.length + 1));
+                    const startY = cy + innerR * 0.1;
+                    ctx.font = `400 9px Inter, sans-serif`;
+                    items.forEach((i, n) => {
+                        const iy = startY + n * lineH;
+                        // name
+                        ctx.textAlign = 'left';
+                        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                        const maxW = innerR * 0.85;
+                        ctx.fillText(labels[i], cx - maxW / 2, iy);
+                        // amount right-aligned
+                        ctx.textAlign = 'right';
+                        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                        ctx.fillText(ui.formatCurrency(values[i]), cx + maxW / 2, iy);
+                    });
+                    if (group.indices.length > 5) {
+                        ctx.textAlign = 'center';
+                        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                        ctx.fillText(`+ ${group.indices.length - 5} další`, cx, startY + 5 * lineH);
+                    }
+                } else {
+                    // Default: total spent this month
+                    const spentTotal = values.filter((_, i) => labels[i] !== 'Zbývá').reduce((s, v) => s + v, 0);
+                    ctx.font = `600 9px Inter, sans-serif`;
+                    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+                    ctx.fillText('CELKEM', cx, cy - 10);
+                    ctx.font = `700 14px Inter, sans-serif`;
+                    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                    ctx.fillText(ui.formatCurrency(spentTotal), cx, cy + 9);
+                }
 
                 ctx.restore();
             }
@@ -295,9 +354,9 @@ const charts = {
                 labels,
                 datasets: [{
                     data: values,
-                    backgroundColor: [...monoColors],
-                    borderColor: labels.map(l => l === 'Zbývá' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.4)'),
-                    borderWidth: 2,
+                    backgroundColor: bgColors,
+                    borderColor: labels.map(l => l === 'Zbývá' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.35)'),
+                    borderWidth: 1.5,
                     hoverOffset: 0,
                     offset: new Array(totalCount).fill(0)
                 }]
@@ -305,18 +364,18 @@ const charts = {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
+                cutout: '62%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            color: 'rgba(255,255,255,0.45)',
-                            font: { size: 10 },
-                            padding: 12,
-                            boxWidth: 10,
-                            boxHeight: 10,
+                            color: 'rgba(255,255,255,0.38)',
+                            font: { size: 9 },
+                            padding: 10,
+                            boxWidth: 8,
+                            boxHeight: 8,
                             borderRadius: 2,
-                            filter: (item) => item.text !== 'Zbývá' || remaining > 0
+                            filter: item => item.text !== 'Zbývá' || remaining > 0
                         }
                     },
                     tooltip: {
