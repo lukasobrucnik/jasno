@@ -1250,18 +1250,9 @@ header {
         padding: 24px 20px 0;
     }
 
-    .glass-modal,
     .bottom-nav {
         max-width: 480px;
         left: 50%;
         transform: translateX(-50%);
-    }
-
-    .modal-overlay.hidden .glass-modal {
-        transform: translateX(-50%) translateY(100%);
-    }
-
-    .modal-overlay:not(.hidden) .glass-modal {
-        transform: translateX(-50%) translateY(0);
     }
 }
