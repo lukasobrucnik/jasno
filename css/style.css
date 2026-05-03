@@ -261,6 +261,46 @@ header {
     font-variant-numeric: tabular-nums;
 }
 
+/* ---- HERO METRICS ---- */
+.hero-metrics {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.hero-metrics.hidden {
+    display: none;
+}
+
+.hero-metric-tempo {
+    font-size: 0.7rem;
+    color: var(--fg-muted);
+    text-align: center;
+    letter-spacing: 0.01em;
+}
+
+.hero-metric-tempo.positive {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.hero-metric-tempo.negative {
+    color: var(--accent);
+}
+
+.hero-metric-safe {
+    font-family: var(--font-dot);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    text-transform: uppercase;
+}
+
 /* ---- STATS GRID ---- */
 .stats-grid {
     display: grid;

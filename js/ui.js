@@ -83,10 +83,45 @@ const ui = {
             sr.style.color = logic.getRemainingTotal(this.selectedDate) < 0 ? 'var(--accent)' : '';
         }
 
+        this._renderHeroMetrics();
         this.renderTransactions();
 
         if (this.activeTab === 'charts') charts.init();
         if (this.activeTab === 'goals') this.renderGoals();
+    },
+
+    _renderHeroMetrics() {
+        const container = document.getElementById('hero-metrics');
+        const tempoEl = document.getElementById('burn-rate-text');
+        const safeEl = document.getElementById('safe-today-pill');
+        if (!container || !tempoEl || !safeEl) return;
+
+        const ref = this.selectedDate;
+        const budget = logic.getNetIncome(ref) - logic.getFixedMonthlyTotal(ref);
+        const safeToday = logic.getSafeToSpendToday(ref);
+        const burnInfo = logic.getBurnRateInfo(ref);
+
+        if (budget <= 0) { container.classList.add('hidden'); return; }
+
+        container.classList.remove('hidden');
+
+        // Burn rate text
+        if (burnInfo) {
+            const { surplus } = burnInfo;
+            if (surplus >= 0) {
+                tempoEl.textContent = `Při tomto tempu ti zbyde o ${this.formatCurrency(surplus)} víc`;
+                tempoEl.className = 'hero-metric-tempo positive';
+            } else {
+                tempoEl.textContent = `Při tomto tempu přesáhneš rozpočet o ${this.formatCurrency(Math.abs(surplus))}`;
+                tempoEl.className = 'hero-metric-tempo negative';
+            }
+            tempoEl.style.display = '';
+        } else {
+            tempoEl.style.display = 'none';
+        }
+
+        // Safe to spend today
+        safeEl.textContent = `Dnes bezpečně: ${this.formatCurrency(Math.round(safeToday))}`;
     },
 
     _renderArc(spent, totalBudget) {

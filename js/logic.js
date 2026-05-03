@@ -170,6 +170,26 @@ const logic = {
         return dailyRate * daysInMonth;
     },
 
+    getSafeToSpendToday(refDate = new Date()) {
+        const dayOfMonth = refDate.getDate();
+        const daysInMonth = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
+        const daysRemaining = daysInMonth - dayOfMonth + 1;
+        const remaining = this.getRemainingTotal(refDate);
+        if (daysRemaining <= 0) return 0;
+        return Math.max(0, remaining / daysRemaining);
+    },
+
+    getBurnRateInfo(refDate = new Date()) {
+        const dayOfMonth = refDate.getDate();
+        const daysInMonth = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
+        const totalBudget = this.getNetIncome(refDate) - this.getFixedMonthlyTotal(refDate);
+        const spentSoFar = this.getMonthlyTotalSpent(refDate);
+        if (dayOfMonth < 3 || totalBudget <= 0 || spentSoFar === 0) return null;
+        const predictedEnd = (spentSoFar / dayOfMonth) * daysInMonth;
+        const surplus = Math.round(totalBudget - predictedEnd);
+        return { surplus };
+    },
+
     getAmountSuggestion(prefix, refDate = new Date()) {
         if (!prefix || prefix === '0') return null;
         const prefixStr = String(prefix).replace(/\s/g, '');
