@@ -571,6 +571,31 @@ header {
     font-size: 0.85rem;
 }
 
+.tx-empty-today {
+    padding: 22px 16px;
+    text-align: center;
+    color: rgba(255,255,255,0.2);
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.tx-section-label {
+    padding: 14px 16px 8px;
+    font-family: var(--font-dot);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.18);
+    text-transform: uppercase;
+}
+
+.tx-other {
+    opacity: 0.22;
+}
+
+.tx-other .tx-item:hover {
+    opacity: 1;
+}
+
 /* ---- BOTTOM NAV ---- */
 .bottom-nav {
     position: fixed;

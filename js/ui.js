@@ -167,16 +167,21 @@ const ui = {
 
         const m = this.selectedDate.getMonth();
         const y = this.selectedDate.getFullYear();
-        const txs = logic.data.transactions
+        const todayStr = this.selectedDate.toDateString();
+
+        const allTxs = logic.data.transactions
             .filter(t => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; })
             .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        if (txs.length === 0) {
+        if (allTxs.length === 0) {
             container.innerHTML = '<div class="empty-state">Zatím žádné výdaje. Přidej první.</div>';
             return;
         }
 
-        container.innerHTML = txs.map(t => `
+        const todayTxs = allTxs.filter(t => new Date(t.date).toDateString() === todayStr);
+        const otherTxs = allTxs.filter(t => new Date(t.date).toDateString() !== todayStr);
+
+        const txHTML = t => `
             <div class="tx-item" data-id="${t.id}" onclick="ui.handleTxClick(${t.id})">
                 <div class="tx-icon-wrapper">${this.getCategoryIcon(t.category)}</div>
                 <div class="tx-details">
@@ -184,8 +189,22 @@ const ui = {
                     <div class="tx-date">${new Date(t.date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</div>
                 </div>
                 <div class="tx-amount">- ${this.formatCurrency(t.amount)}</div>
-            </div>
-        `).join('');
+            </div>`;
+
+        let html = '';
+
+        if (todayTxs.length === 0) {
+            html += '<div class="tx-empty-today">Zatím žádné výdaje pro dnešek</div>';
+        } else {
+            html += todayTxs.map(txHTML).join('');
+        }
+
+        if (otherTxs.length > 0) {
+            html += '<div class="tx-section-label">Výdaje z ostatních dnů</div>';
+            html += `<div class="tx-other">${otherTxs.map(txHTML).join('')}</div>`;
+        }
+
+        container.innerHTML = html;
     },
 
     handleTxClick(id) {
