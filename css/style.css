@@ -999,6 +999,10 @@ header {
     font-weight: 500;
 }
 
+.prediction-warning.hidden {
+    display: none;
+}
+
 /* ---- GOALS ---- */
 .goals-grid {
     display: grid;
