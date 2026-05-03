@@ -57,9 +57,25 @@
                             <span class="arc-label-right" id="arc-total">0</span>
                         </div>
                     </div>
-                    <div id="hero-metrics" class="hero-metrics hidden">
-                        <div id="burn-rate-text" class="hero-metric-tempo"></div>
-                        <div id="safe-today-pill" class="hero-metric-safe"></div>
+                    <div id="spend-meter" class="spend-meter hidden">
+                        <div class="sm-bar">
+                            <div class="sm-zone sm-zone--save" id="sm-zone-save"></div>
+                            <div class="sm-zone sm-zone--ok" id="sm-zone-ok"></div>
+                            <div class="sm-zone sm-zone--over" id="sm-zone-over"></div>
+                            <div class="sm-tick sm-tick--l"></div>
+                            <div class="sm-tick sm-tick--r"></div>
+                            <div class="sm-tick-amt sm-tick-amt--l" id="sm-amt-left"></div>
+                            <div class="sm-tick-amt sm-tick-amt--r" id="sm-amt-right"></div>
+                            <div class="sm-dot" id="sm-dot"></div>
+                        </div>
+                        <div class="sm-labels">
+                            <span class="sm-label" id="sm-lbl-save">Šetříš</span>
+                            <span class="sm-label sm-label--mid" id="sm-lbl-ok">
+                                V&nbsp;pohodě
+                                <span class="sm-rec" id="sm-rec"></span>
+                            </span>
+                            <span class="sm-label sm-label--end" id="sm-lbl-over">Moc</span>
+                        </div>
                     </div>
                 </section>
 

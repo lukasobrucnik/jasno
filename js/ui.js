@@ -83,45 +83,70 @@ const ui = {
             sr.style.color = logic.getRemainingTotal(this.selectedDate) < 0 ? 'var(--accent)' : '';
         }
 
-        this._renderHeroMetrics();
+        this._renderSpendMeter();
         this.renderTransactions();
 
         if (this.activeTab === 'charts') charts.init();
         if (this.activeTab === 'goals') this.renderGoals();
     },
 
-    _renderHeroMetrics() {
-        const container = document.getElementById('hero-metrics');
-        const tempoEl = document.getElementById('burn-rate-text');
-        const safeEl = document.getElementById('safe-today-pill');
-        if (!container || !tempoEl || !safeEl) return;
+    _renderSpendMeter() {
+        const meter = document.getElementById('spend-meter');
+        if (!meter) return;
 
         const ref = this.selectedDate;
         const budget = logic.getNetIncome(ref) - logic.getFixedMonthlyTotal(ref);
+
+        if (budget <= 0) { meter.classList.add('hidden'); return; }
+        meter.classList.remove('hidden');
+
         const safeToday = logic.getSafeToSpendToday(ref);
-        const burnInfo = logic.getBurnRateInfo(ref);
+        const todaySpent = logic.getTodaySpent(ref);
 
-        if (budget <= 0) { container.classList.add('hidden'); return; }
-
-        container.classList.remove('hidden');
-
-        // Burn rate text
-        if (burnInfo) {
-            const { surplus } = burnInfo;
-            if (surplus >= 0) {
-                tempoEl.textContent = `Při tomto tempu ti zbyde o ${this.formatCurrency(surplus)} víc`;
-                tempoEl.className = 'hero-metric-tempo positive';
-            } else {
-                tempoEl.textContent = `Při tomto tempu přesáhneš rozpočet o ${this.formatCurrency(Math.abs(surplus))}`;
-                tempoEl.className = 'hero-metric-tempo negative';
-            }
-            tempoEl.style.display = '';
+        // Dot position: 3 equal visual sections mapped to spending ratio
+        // 0–70% of recommended → left section (0%–33.33% of bar)
+        // 70–130% → middle (33.33%–66.67%)
+        // 130%+ → right (66.67%–100%)
+        const ratio = safeToday > 0 ? todaySpent / safeToday : 0;
+        let dotPct;
+        if (ratio <= 0.7) {
+            dotPct = (ratio / 0.7) * 33.33;
+        } else if (ratio <= 1.3) {
+            dotPct = 33.33 + ((ratio - 0.7) / 0.6) * 33.33;
         } else {
-            tempoEl.style.display = 'none';
+            dotPct = 66.67 + Math.min(1, (ratio - 1.3) / 0.7) * 33.33;
         }
+        dotPct = Math.max(0, Math.min(100, dotPct));
 
-        // Safe to spend today
-        safeEl.textContent = `Dnes bezpečně: ${this.formatCurrency(Math.round(safeToday))}`;
+        const zone = ratio <= 0.7 ? 'save' : ratio <= 1.3 ? 'ok' : 'over';
+
+        // Dot
+        const dot = document.getElementById('sm-dot');
+        if (dot) dot.style.left = dotPct + '%';
+
+        // Zone glow
+        ['save', 'ok', 'over'].forEach(z => {
+            document.getElementById('sm-zone-' + z)?.classList.toggle('active', z === zone);
+        });
+
+        // Label active color
+        const activeClass = { save: 'active-save', ok: 'active-ok', over: 'active-over' };
+        ['save', 'ok', 'over'].forEach(z => {
+            const el = document.getElementById('sm-lbl-' + z);
+            if (!el) return;
+            el.classList.remove('active-save', 'active-ok', 'active-over');
+            if (z === zone) el.classList.add(activeClass[z]);
+        });
+
+        // Threshold amounts at dividers
+        const leftAmt = document.getElementById('sm-amt-left');
+        const rightAmt = document.getElementById('sm-amt-right');
+        if (leftAmt) leftAmt.textContent = this.formatCurrency(Math.round(safeToday * 0.7));
+        if (rightAmt) rightAmt.textContent = this.formatCurrency(Math.round(safeToday * 1.3));
+
+        // Recommended text
+        const rec = document.getElementById('sm-rec');
+        if (rec) rec.textContent = 'Doporučeno: ' + this.formatCurrency(Math.round(safeToday));
     },
 
     _renderArc(spent, totalBudget) {

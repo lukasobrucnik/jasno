@@ -170,6 +170,13 @@ const logic = {
         return dailyRate * daysInMonth;
     },
 
+    getTodaySpent(refDate = new Date()) {
+        const dateStr = refDate.toDateString();
+        return this.data.transactions
+            .filter(t => new Date(t.date).toDateString() === dateStr)
+            .reduce((sum, t) => sum + t.amount, 0);
+    },
+
     getSafeToSpendToday(refDate = new Date()) {
         const dayOfMonth = refDate.getDate();
         const daysInMonth = new Date(refDate.getFullYear(), refDate.getMonth() + 1, 0).getDate();
