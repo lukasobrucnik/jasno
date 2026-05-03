@@ -1,177 +1,202 @@
+/* =============================================
+   JASNO. — ui.js
+   DOM manipulace a renderování.
+============================================= */
 const ui = {
+    selectedDate: new Date(),
+    calendarViewDate: new Date(),
+    activeTab: 'overview',
+    _pendingDeleteId: null,
+
     init() {
         this.selectedDate = new Date();
         this.calendarViewDate = new Date();
         this.bindEvents();
-        this.render();
         this.updateDate();
-        this.activeTab = 'overview';
+        this.render();
     },
-    
+
     bindEvents() {
-        // Zavření modalů při kliknutí na pozadí overlaye
+        // Zavření modalu kliknutím na overlay pozadí
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
+            overlay.addEventListener('click', e => {
                 if (e.target === overlay) this.closeModals();
             });
         });
     },
 
+    // ---- DATE ----
     updateDate() {
-        const dateDisplay = document.getElementById('current-date');
+        const el = document.getElementById('current-date');
         const nextBtn = document.getElementById('next-day-btn');
-        const options = { weekday: 'long', day: 'numeric', month: 'long' };
-        
-        let dateString = this.selectedDate.toLocaleDateString('cs-CZ', options);
-        // První písmeno velké
-        dateString = dateString.charAt(0).toUpperCase() + dateString.slice(1);
-        dateDisplay.textContent = dateString;
-        
-        // Zakázat tlačítko dopředu, pokud jsme v budoucnu (volitelné, ale logické pro rozpočet)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const sel = new Date(this.selectedDate);
-        sel.setHours(0, 0, 0, 0);
-        
+        const options = { weekday: 'short', day: 'numeric', month: 'short' };
+        let str = this.selectedDate.toLocaleDateString('cs-CZ', options);
+        el.textContent = str.charAt(0).toUpperCase() + str.slice(1);
+
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const sel = new Date(this.selectedDate); sel.setHours(0, 0, 0, 0);
         if (nextBtn) {
             nextBtn.disabled = sel >= today;
-            nextBtn.style.opacity = sel >= today ? '0.3' : '1';
         }
     },
-    
+
     changeDate(delta) {
-        this.selectedDate.setDate(this.selectedDate.getDate() + delta);
+        const newDate = new Date(this.selectedDate);
+        newDate.setDate(newDate.getDate() + delta);
+        const today = new Date(); today.setHours(23, 59, 59, 999);
+        if (delta > 0 && newDate > today) return;
+        this.selectedDate = newDate;
         this.updateDate();
-        this.render(); // Překreslit data pro daný den
+        this.render();
     },
-    
-    handleDateSelect(e) {
-        const newDate = new Date(e.target.value);
-        if (!isNaN(newDate.getTime())) {
-            this.selectedDate = newDate;
-            this.updateDate();
-            this.render();
-        }
-    },
-    
+
+    // ---- MAIN RENDER ----
     render() {
-        // Natvrdo zobrazeno vždy zbývající měsíční částka podle přání uživatele
         const allowance = logic.getCurrentAllowance(this.selectedDate);
-        const allowanceEl = document.getElementById('daily-allowance');
-        const allowanceTitle = document.getElementById('allowance-title');
-        
-        if (this.data?.viewMode === 'monthly') {
-            allowanceTitle.textContent = 'TENTO MĚSÍC MŮŽEŠ UTRATIT';
-        } else if (this.data?.viewMode === 'weekly') {
-            allowanceTitle.textContent = 'TENTO TÝDEN MŮŽEŠ UTRATIT';
-        } else {
-            allowanceTitle.textContent = 'DNES MŮŽEŠ UTRATIT';
-        }
-        
-        // Vykreslení částky
-        allowanceEl.innerHTML = `${this.formatCurrency(allowance, false)} <span class="currency">Kč</span>`;
-        if (allowance < 0) {
-            allowanceEl.classList.add('negative');
-        } else {
-            allowanceEl.classList.remove('negative');
+        const netIncome = logic.getNetIncome(this.selectedDate);
+        const fixedTotal = logic.getFixedMonthlyTotal(this.selectedDate);
+        const totalBudget = netIncome - fixedTotal;
+        const spent = logic.getMonthlyTotalSpent(this.selectedDate);
+
+        // Hero number
+        const numEl = document.querySelector('.hero-number');
+        if (numEl) {
+            numEl.textContent = this.formatCurrency(allowance, false);
+            numEl.classList.toggle('negative', allowance < 0);
         }
 
-        // Logic for visual progress bar (budget status)
-        const progressBar = document.getElementById('allowance-progress');
-        const totalBudget = logic.getNetIncome(this.selectedDate) - logic.getFixedMonthlyTotal(this.selectedDate);
-        if (totalBudget > 0) {
-            const spent = logic.getMonthlyTotalSpent(this.selectedDate);
-            let percent = 100 - ((spent / totalBudget) * 100);
-            if (percent < 0) percent = 0;
-            progressBar.style.width = `${percent}%`;
-            
-            if (percent < 15) {
-                progressBar.classList.add('warning');
-            } else {
-                progressBar.classList.remove('warning');
-            }
-        } else {
-            progressBar.style.width = '0%';
+        // Arc progress
+        this._renderArc(spent, totalBudget);
+
+        // Arc total label
+        const arcTotal = document.getElementById('arc-total');
+        if (arcTotal) arcTotal.textContent = this.formatCurrency(totalBudget, false);
+
+        // Stat cards
+        const si = document.getElementById('stat-income');
+        const sf = document.getElementById('stat-fixed');
+        const sr = document.getElementById('stat-remaining');
+        if (si) si.textContent = this.formatCurrency(netIncome);
+        if (sf) sf.textContent = this.formatCurrency(fixedTotal);
+        if (sr) {
+            sr.textContent = this.formatCurrency(logic.getRemainingTotal(this.selectedDate));
+            sr.style.color = logic.getRemainingTotal(this.selectedDate) < 0 ? 'var(--accent)' : '';
         }
-        
-        // Vykreslení karet
-        document.getElementById('stat-income').textContent = this.formatCurrency(logic.getNetIncome(this.selectedDate));
-        document.getElementById('stat-fixed').textContent = this.formatCurrency(logic.getFixedMonthlyTotal(this.selectedDate));
-        document.getElementById('stat-remaining').textContent = this.formatCurrency(logic.getRemainingTotal(this.selectedDate));
-        
+
         this.renderTransactions();
-        this.renderGoals();
+
         if (this.activeTab === 'charts') charts.init();
+        if (this.activeTab === 'goals') this.renderGoals();
     },
-    
+
+    _renderArc(spent, totalBudget) {
+        const arcFill = document.getElementById('arc-fill');
+        if (!arcFill) return;
+        const totalLength = 283; // approx arc length
+        let ratio = 0;
+        if (totalBudget > 0) ratio = Math.min(1, Math.max(0, spent / totalBudget));
+        // Arc goes from 0% used (full arc visible) to 100% used (no arc visible)
+        const offset = totalLength * ratio;
+        arcFill.style.strokeDashoffset = offset;
+        arcFill.classList.toggle('warning', ratio > 0.85);
+    },
+
     renderTransactions() {
         const container = document.getElementById('transactions-container');
-        
-        // Filter by selected month
+        if (!container) return;
+
         const m = this.selectedDate.getMonth();
         const y = this.selectedDate.getFullYear();
-        
         const txs = logic.data.transactions
-            .filter(t => {
-                const d = new Date(t.date);
-                return d.getMonth() === m && d.getFullYear() === y;
-            })
+            .filter(t => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; })
             .sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+
         if (txs.length === 0) {
-            container.innerHTML = '<div class="empty-state">Zatím žádné výdaje v tomto měsíci.</div>';
+            container.innerHTML = '<div class="empty-state">Zatím žádné výdaje. Přidej první.</div>';
             return;
         }
-        
+
         container.innerHTML = txs.map(t => `
-            <div class="tx-item">
-                <div class="tx-icon-wrapper">
-                    ${this.getCategoryIcon(t.category)}
-                </div>
+            <div class="tx-item" data-id="${t.id}" onclick="ui.handleTxClick(${t.id})">
+                <div class="tx-icon-wrapper">${this.getCategoryIcon(t.category)}</div>
                 <div class="tx-details">
                     <div class="tx-name">${t.note || 'Výdaj'}</div>
-                    <div class="tx-date">${new Date(t.date).toLocaleDateString('cs-CZ')}</div>
+                    <div class="tx-date">${new Date(t.date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })}</div>
                 </div>
-                <div class="tx-amount">-${this.formatCurrency(t.amount)}</div>
+                <div class="tx-amount">- ${this.formatCurrency(t.amount)}</div>
             </div>
         `).join('');
     },
 
+    handleTxClick(id) {
+        if (this._pendingDeleteId === id) {
+            // Second click — smazat
+            logic.deleteTransaction(id);
+            this._pendingDeleteId = null;
+            this.render();
+            this.showToast('Transakce smazána');
+        } else {
+            // First click — oznacit
+            if (this._pendingDeleteId) {
+                const old = document.querySelector(`[data-id="${this._pendingDeleteId}"]`);
+                if (old) old.classList.remove('confirm-delete');
+            }
+            this._pendingDeleteId = id;
+            const el = document.querySelector(`[data-id="${id}"]`);
+            if (el) el.classList.add('confirm-delete');
+            // Auto-reset po 2s
+            setTimeout(() => {
+                if (this._pendingDeleteId === id) {
+                    this._pendingDeleteId = null;
+                    const e = document.querySelector(`[data-id="${id}"]`);
+                    if (e) e.classList.remove('confirm-delete');
+                }
+            }, 2000);
+        }
+    },
+
+    showToast(msg) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2100);
+    },
+
+    // ---- CATEGORIES ----
     renderCategoryList() {
         const container = document.getElementById('category-list');
         const basics = [
-            { id: 'food', name: 'Jídlo', icon: 'food' },
-            { id: 'coffee', name: 'Káva', icon: 'coffee' },
-            { id: 'transport', name: 'Doprava', icon: 'transport' }
+            { id: 'food', name: 'Jídlo' },
+            { id: 'coffee', name: 'Káva' },
+            { id: 'transport', name: 'Doprava' },
+            { id: 'entertainment', name: 'Zábava' },
+            { id: 'health', name: 'Zdraví' }
         ];
-        
-        const customs = logic.data.customCategories;
-        const all = [...basics, ...customs];
-        
+        const all = [...basics, ...logic.data.customCategories];
+
         let html = all.map((cat, idx) => `
             <label class="category-option" title="${cat.name}">
                 <input type="radio" name="category" value="${cat.id}" ${idx === 0 ? 'checked' : ''} onchange="ui.updateModalTitle('${cat.name}')">
-                <div class="category-btn">
-                    ${this.getCategoryIcon(cat.icon || cat.id)}
-                </div>
+                <div class="category-btn">${this.getCategoryIcon(cat.icon || cat.id)}</div>
             </label>
         `).join('');
-        
-        // Přidat tlacitko pro novou kategorii (pokud jich není moc)
-        if (customs.length < 3) {
-            html += `
-                <div class="add-category-btn" onclick="ui.handleNewCategoryClick()">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
-                </div>
-            `;
+
+        if (logic.data.customCategories.length < 3) {
+            html += `<div class="add-category-btn" onclick="ui.handleNewCategoryClick()" title="Nová kategorie">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            </div>`;
         }
-        
+
         container.innerHTML = html;
         this.updateModalTitle(all[0].name);
     },
 
-    updateModalTitle(categoryName) {
-        document.getElementById('tx-modal-title').textContent = `VÝDAJ ZA ${categoryName.toUpperCase()}`;
+    updateModalTitle(name) {
+        const el = document.getElementById('tx-modal-title');
+        if (el) el.textContent = `VÝDAJ — ${name.toUpperCase()}`;
     },
 
     handleNewCategoryClick() {
@@ -183,235 +208,222 @@ const ui = {
         e.preventDefault();
         const input = document.getElementById('new-category-name');
         const name = input.value.trim();
-        
         if (!name) return;
-        
-        const newId = logic.addCustomCategory(name, null);
+        const newId = logic.addCustomCategory(name);
         if (newId) {
             this.renderCategoryList();
-            
-            // Vybrat nově vytvořenou kategorii
             const radio = document.querySelector(`input[name="category"][value="${newId}"]`);
-            if (radio) radio.checked = true;
-            this.updateModalTitle(name);
+            if (radio) { radio.checked = true; this.updateModalTitle(name); }
         }
-        
         this.closeCategoryModal();
         input.value = '';
     },
-    
+
     closeCategoryModal() {
         document.getElementById('category-name-modal').classList.add('hidden');
     },
-    
+
+    // ---- INPUT FORMATTING ----
     formatInputField(event) {
-        let input = event.target;
-        // Povolí pouze číslice
-        let val = input.value.replace(/\D/g, '');
-        
-        // Autocomplete Suggestion Logic
-        const suggestionBox = document.getElementById(input.id + '-suggestion');
-        if (suggestionBox) {
-            const suggestion = logic.getAmountSuggestion(val);
-            if (suggestion) {
-                suggestionBox.innerHTML = `${this.formatCurrency(suggestion)} <span class="tab-hint">TAB</span>`;
-                suggestionBox.classList.remove('hidden');
-                input.dataset.suggestion = suggestion;
+        const input = event.target;
+        const val = input.value.replace(/\D/g, '');
+
+        // Suggestion
+        const suggId = input.id + '-suggestion';
+        const suggBox = document.getElementById(suggId);
+        if (suggBox) {
+            const sug = logic.getAmountSuggestion(val, this.selectedDate);
+            if (sug) {
+                suggBox.innerHTML = `${this.formatCurrency(sug)} <span class="tab-hint">TAB</span>`;
+                suggBox.classList.remove('hidden');
+                input.dataset.suggestion = sug;
             } else {
-                suggestionBox.classList.add('hidden');
+                suggBox.classList.add('hidden');
                 input.dataset.suggestion = '';
             }
         }
-        
-        if (val) {
-            input.value = parseInt(val, 10).toLocaleString('cs-CZ');
-        } else {
-            input.value = '';
-        }
+
+        input.value = val ? parseInt(val, 10).toLocaleString('cs-CZ') : '';
     },
-    
+
     handleAmountKeydown(event) {
         if (event.key === 'Tab') {
             const input = event.target;
-            const suggestion = input.dataset.suggestion;
-            const suggestionBox = document.getElementById(input.id + '-suggestion');
-            
-            if (suggestion && suggestionBox && !suggestionBox.classList.contains('hidden')) {
+            const sug = input.dataset.suggestion;
+            const suggBox = document.getElementById(input.id + '-suggestion');
+            if (sug && suggBox && !suggBox.classList.contains('hidden')) {
                 event.preventDefault();
-                input.value = this.formatCurrency(suggestion, false);
-                suggestionBox.classList.add('hidden');
+                input.value = this.formatCurrency(parseInt(sug, 10), false).replace(/\s/g, '').replace(/\u00a0/g, '');
+                // reformat
+                const fakeEvent = { target: input };
+                const val = input.value.replace(/\D/g, '');
+                input.value = val ? parseInt(val, 10).toLocaleString('cs-CZ') : '';
+                suggBox.classList.add('hidden');
                 input.dataset.suggestion = '';
-                
-                // Vynutit update navázaných eventů (např. daně)
-                const e = new Event('input', { bubbles: true });
-                input.dispatchEvent(e);
+                // Trigger oninput for tax display etc.
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
     },
-    
+
+    // ---- FORMATTERS ----
     formatCurrency(amount, includeSymbol = true) {
-        const formatted = Math.floor(amount).toLocaleString('cs-CZ');
+        const n = Math.round(Math.abs(amount));
+        const formatted = n.toLocaleString('cs-CZ');
         return includeSymbol ? `${formatted} Kč` : formatted;
     },
-    
+
     getCategoryIcon(catId) {
-        // Pokud id začíná "data:", jde o custom base64 obrázek
-        if (catId.startsWith('data:')) {
-            return `<img src="${catId}" class="custom-icon-img" alt="Icon">`;
+        if (catId && catId.startsWith('data:')) {
+            return `<img src="${catId}" style="width:16px;height:16px;object-fit:contain;filter:grayscale(1) brightness(2)" alt="">`;
         }
-        
         const icons = {
-            food: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M12 3v9"/><path d="M7 6v6"/><path d="M17 6v6"/></svg>`,
-            coffee: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>`,
-            transport: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M4 11h16"/><path d="M8 15h.01"/><path d="M16 15h.01"/><path d="M10 4v7"/><path d="M14 4v7"/></svg>`,
-            other: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`
+            food: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M12 3v9"/><path d="M7 6v6"/><path d="M17 6v6"/></svg>`,
+            coffee: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>`,
+            transport: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M4 11h16"/><path d="M8 15h.01"/><path d="M16 15h.01"/></svg>`,
+            entertainment: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+            health: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+            other: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`
         };
-        
-        // Zkusit najít ikonu podle ID (pro custom kategorie)
+
         const custom = logic.data.customCategories.find(c => c.id === catId);
         if (custom) {
-            if (custom.icon) {
-                return `<img src="${custom.icon}" class="custom-icon-img" alt="${custom.name}">`;
-            } else {
-                // Výchozí ikona, pokud uživatel nenahraje obrázek (hvězda)
-                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-            }
+            if (custom.icon) return `<img src="${custom.icon}" style="width:16px;height:16px;object-fit:contain;filter:grayscale(1) brightness(2)" alt="${custom.name}">`;
+            return icons.other;
         }
-        
+
         return icons[catId] || icons.other;
     },
-    
+
+    // ---- MODAL OPENERS ----
     openTransactionModal() {
         this.renderCategoryList();
         document.getElementById('transaction-modal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('tx-amount').focus(), 150);
+        setTimeout(() => document.getElementById('tx-amount').focus(), 200);
     },
-    
+
     openSetupModal() {
-        document.getElementById('setup-modal').classList.remove('hidden');
-        const input = document.getElementById('setup-amount');
-        const settingsBlock = document.getElementById('income-settings-block');
-        
         const config = logic.getMonthlyConfig(this.selectedDate);
-        
-        input.value = config.income > 0 ? this.formatCurrency(config.income, false) : '';
-        input.dataset.type = 'income';
-        
-        document.getElementById('setup-title').textContent = 'NASTAVIT PŘÍJMY';
-        settingsBlock.classList.remove('hidden');
-        
-        // Set current toggles
+        const input = document.getElementById('setup-amount');
+        input.value = config.income > 0 ? config.income.toLocaleString('cs-CZ') : '';
+        input.dataset.suggestion = '';
+
         const freqRadio = document.querySelector(`input[name="income-freq"][value="${config.incomeFrequency}"]`);
         if (freqRadio) freqRadio.checked = true;
-        
+
         const taxRadio = document.querySelector(`input[name="tax-mode"][value="${config.isGross ? 'gross' : 'net'}"]`);
         if (taxRadio) taxRadio.checked = true;
-        
+
         this.updateTaxDisplay();
-        setTimeout(() => input.focus(), 150);
+        document.getElementById('setup-modal').classList.remove('hidden');
+        setTimeout(() => input.focus(), 200);
     },
-    
+
     openFixedModal() {
         this.renderFixedList();
         document.getElementById('fixed-setup-modal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('fixed-name').focus(), 150);
+        setTimeout(() => document.getElementById('fixed-name').focus(), 200);
     },
-    
+
+    openGoalModal() {
+        document.getElementById('goal-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('goal-name').focus(), 200);
+    },
+
+    openGoalDepositModal(id) {
+        document.getElementById('deposit-goal-id').value = id;
+        document.getElementById('deposit-amount').value = '';
+        document.getElementById('goal-deposit-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('deposit-amount').focus(), 200);
+    },
+
+    closeModals() {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
+    },
+
+    // ---- FIXED EXPENSES ----
     renderFixedList() {
         const container = document.getElementById('fixed-expenses-list');
         const config = logic.getMonthlyConfig(this.selectedDate);
         const list = config.fixedExpenses;
-        
+
         if (list.length === 0) {
-            container.innerHTML = '<div class="empty-state" style="margin: 0;">Zatím žádné fixní výdaje.</div>';
+            container.innerHTML = '<div class="empty-state" style="padding:16px 0;font-size:0.8rem;">Zatím žádné fixní výdaje.</div>';
             return;
         }
-        
-        const freqs = { 'daily': 'Denně', 'weekly': 'Týdně', 'monthly': 'Měsíčně' };
-        const daysInMonthTotal = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth() + 1, 0).getDate();
-        
+
+        const freqs = { daily: 'Denně', weekly: 'Týdně', monthly: 'Měsíčně' };
+        const daysInMonth = new Date(this.selectedDate.getFullYear(), this.selectedDate.getMonth() + 1, 0).getDate();
+
         container.innerHTML = list.map(item => {
             let monthlyVal = item.amount;
-            let formulaText = '';
-            
-            if (item.frequency === 'daily') {
-                monthlyVal = item.amount * daysInMonthTotal;
-                formulaText = ` = ${this.formatCurrency(monthlyVal)} měsíčně`;
-            } else if (item.frequency === 'weekly') {
-                monthlyVal = item.amount * (daysInMonthTotal / 7);
-                formulaText = ` = ${this.formatCurrency(monthlyVal)} měsíčně`;
-            }
-            
+            let extra = '';
+            if (item.frequency === 'daily') { monthlyVal = item.amount * daysInMonth; extra = ` → ${this.formatCurrency(monthlyVal)}/měs.`; }
+            if (item.frequency === 'weekly') { monthlyVal = item.amount * (daysInMonth / 7); extra = ` → ${this.formatCurrency(monthlyVal)}/měs.`; }
             return `
-            <div class="fixed-item">
-                <div class="fixed-item-info">
-                    <div class="fixed-item-name">${item.name}</div>
-                    <div class="fixed-item-amount">${this.formatCurrency(item.amount)} / ${freqs[item.frequency] || 'Měsíčně'} <span style="color: var(--accent); opacity: 0.9;">${formulaText}</span></div>
+                <div class="fixed-item">
+                    <div class="fixed-item-info">
+                        <div class="fixed-item-name">${item.name}</div>
+                        <div class="fixed-item-amount">${this.formatCurrency(item.amount)} / ${freqs[item.frequency] || 'Měsíčně'}<span style="color:var(--accent);opacity:0.8;"> ${extra}</span></div>
+                    </div>
+                    <button class="fixed-item-delete" onclick="ui.deleteFixedExpense(${item.id})" aria-label="Smazat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
                 </div>
-                <button class="fixed-item-delete" onclick="ui.deleteFixedExpense(${item.id})">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                </button>
-            </div>
             `;
         }).join('');
     },
-    
+
     deleteFixedExpense(id) {
         logic.removeFixedExpense(id, this.selectedDate);
         this.renderFixedList();
         this.render();
     },
-    
+
     submitFixedExpense(e) {
         e.preventDefault();
         const name = document.getElementById('fixed-name').value.trim();
-        const amountRaw = document.getElementById('fixed-amount').value.replace(/\s/g, '');
-        const amount = parseFloat(amountRaw);
+        const raw = document.getElementById('fixed-amount').value.replace(/\D/g, '');
+        const amount = parseFloat(raw);
         const freq = document.querySelector('input[name="fixed-freq"]:checked').value;
-        
+
         if (!name || !amount || amount <= 0) return;
-        
+
         logic.addFixedExpense(name, amount, freq, this.selectedDate);
-        
         document.getElementById('add-fixed-form').reset();
-        // Obnovit defaultní rádio tlačítko
         document.querySelector('input[name="fixed-freq"][value="monthly"]').checked = true;
-        
         this.renderFixedList();
         this.render();
+        this.showToast('Fixní výdaj přidán');
     },
-    
+
+    // ---- TAX DISPLAY ----
     updateTaxDisplay() {
-        const type = document.getElementById('setup-amount').dataset.type;
-        if (type !== 'income') return;
-        
-        const isGross = document.querySelector('input[name="tax-mode"]:checked').value === 'gross';
+        const isGross = document.querySelector('input[name="tax-mode"]:checked')?.value === 'gross';
         const box = document.getElementById('tax-animation-box');
-        const amountRaw = document.getElementById('setup-amount').value.replace(/\s/g, '');
-        const amount = parseFloat(amountRaw) || 0;
-        
+        if (!box) return;
+        const raw = document.getElementById('setup-amount').value.replace(/\D/g, '');
+        const amount = parseFloat(raw) || 0;
+
         if (isGross && amount > 0) {
             box.classList.remove('collapsed');
-            const tax = amount * 0.20; // 20%
-            document.getElementById('tax-value-display').textContent = `- ${this.formatCurrency(tax)}`;
+            document.getElementById('tax-value-display').textContent = `- ${this.formatCurrency(amount * 0.20)}`;
         } else {
             box.classList.add('collapsed');
         }
     },
-    
-    closeModals() {
-        document.querySelectorAll('.modal-overlay').forEach(el => el.classList.add('hidden'));
-    },
-    
+
+    // ---- FORM SUBMITS ----
     submitTransaction(e) {
         e.preventDefault();
-        const amountRaw = document.getElementById('tx-amount').value.replace(/\s/g, '');
-        const amount = parseFloat(amountRaw);
-        const categoryElement = document.querySelector('input[name="category"]:checked');
-        const category = categoryElement ? categoryElement.value : 'other';
-        
-        // Získat název kategorie pro poznámku pokud chybí
-        const basics = { food: 'Jídlo', coffee: 'Káva', transport: 'Doprava' };
+        const raw = document.getElementById('tx-amount').value.replace(/\D/g, '');
+        const amount = parseFloat(raw);
+        if (!amount || amount <= 0) return;
+
+        const catEl = document.querySelector('input[name="category"]:checked');
+        const category = catEl ? catEl.value : 'other';
+
+        const basics = { food: 'Jídlo', coffee: 'Káva', transport: 'Doprava', entertainment: 'Zábava', health: 'Zdraví' };
         let catName = basics[category];
         if (!catName) {
             const custom = logic.data.customCategories.find(c => c.id === category);
@@ -419,156 +431,131 @@ const ui = {
         }
 
         const noteInput = document.getElementById('tx-note');
-        const note = noteInput.value || catName;
-        
-        if (!amount || amount <= 0) return;
-        
-        // Použijeme vybraný datum
+        const note = noteInput.value.trim() || catName;
+
         const txDate = new Date(this.selectedDate);
-        // Pokud je to dnes, necháme i aktuální čas, jinak nastavíme poledne
         const today = new Date();
-        if (txDate.toDateString() !== today.toDateString()) {
-            txDate.setHours(12, 0, 0, 0);
-        } else {
+        if (txDate.toDateString() === today.toDateString()) {
             txDate.setHours(today.getHours(), today.getMinutes(), today.getSeconds());
+        } else {
+            txDate.setHours(12, 0, 0, 0);
         }
 
         logic.addTransaction(amount, category, note, txDate.toISOString());
         this.closeModals();
-        
-        setTimeout(() => document.getElementById('tx-form').reset(), 300);
         this.render();
+        this.showToast('Máš uloženo ✓');
+        setTimeout(() => document.getElementById('tx-form').reset(), 300);
     },
-    
+
     submitSetup(e) {
         e.preventDefault();
-        const input = document.getElementById('setup-amount');
-        const amountRaw = input.value.replace(/\s/g, '');
-        const amount = parseFloat(amountRaw) || 0;
-        
+        const raw = document.getElementById('setup-amount').value.replace(/\D/g, '');
+        const amount = parseFloat(raw) || 0;
         const isGross = document.querySelector('input[name="tax-mode"]:checked').value === 'gross';
         const incomeFreq = document.querySelector('input[name="income-freq"]:checked').value;
         logic.setIncome(amount, isGross, incomeFreq, this.selectedDate);
-        
         this.closeModals();
         this.render();
+        this.showToast('Příjmy uloženy');
     },
 
-    clearData() {
-        if (confirm('Opravdu chcete vymazat všechna svá data?')) {
-            logic.clearData();
-            this.render();
-        }
-    },
-
-    // --- SPA TAB SYSTEM ---
-    switchTab(tabId) {
-        this.activeTab = tabId;
-        
-        // Hide all tabs
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-            tab.classList.add('hidden');
-        });
-        
-        // Show target tab
-        const target = document.getElementById('tab-' + tabId);
-        target.classList.remove('hidden');
-        target.classList.add('active');
-        
-        // Update nav
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        document.getElementById('nav-' + tabId).classList.add('active');
-        
-        // Tab specific actions
-        if (tabId === 'charts') {
-            charts.init();
-        } else if (tabId === 'goals') {
-            this.renderGoals();
-        } else if (tabId === 'overview') {
-            this.render();
-        }
-
-        // Smooth scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-
-    // --- GOALS UI ---
-    openGoalModal() {
-        document.getElementById('goal-modal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('goal-name').focus(), 150);
-    },
-
+    // ---- GOALS ----
     submitGoal(e) {
         e.preventDefault();
         const name = document.getElementById('goal-name').value.trim();
-        const amountRaw = document.getElementById('goal-amount').value.replace(/\s/g, '');
-        const amount = parseFloat(amountRaw);
-        
+        const raw = document.getElementById('goal-amount').value.replace(/\D/g, '');
+        const amount = parseFloat(raw);
         if (!name || isNaN(amount) || amount <= 0) return;
-        
         logic.addGoal(name, amount);
         this.closeModals();
         document.getElementById('goal-name').value = '';
         document.getElementById('goal-amount').value = '';
         this.renderGoals();
+        this.showToast('Cíl přidán');
+    },
+
+    submitGoalDeposit(e) {
+        e.preventDefault();
+        const id = parseInt(document.getElementById('deposit-goal-id').value, 10);
+        const raw = document.getElementById('deposit-amount').value.replace(/\D/g, '');
+        const amount = parseFloat(raw);
+        if (!amount || amount <= 0) return;
+        const goal = logic.data.goals.find(g => g.id === id);
+        if (goal) {
+            logic.updateGoalSaved(id, goal.saved + amount);
+            this.closeModals();
+            this.renderGoals();
+            this.showToast(`+ ${this.formatCurrency(amount)} přidáno`);
+        }
     },
 
     renderGoals() {
         const container = document.getElementById('goals-container');
         if (!container) return;
-
-        const goals = logic.data.goals || [];
+        const goals = logic.data.goals;
         if (goals.length === 0) {
-            container.innerHTML = '<div class="empty-state">Zatím žádné cíle. Přidejte první.</div>';
+            container.innerHTML = '<div class="empty-state">Zatím žádné cíle. Přidej první.</div>';
             return;
         }
-
         container.innerHTML = goals.map(goal => {
-            const percent = Math.min(100, Math.floor((goal.saved / goal.amount) * 100));
+            const percent = Math.min(100, Math.round((goal.saved / goal.amount) * 100));
             return `
                 <div class="glass-card goal-card">
                     <div class="goal-header">
                         <div class="goal-name">${goal.name}</div>
-                        <div class="goal-percent">${percent}%</div>
+                        <div class="goal-percent">${percent} %</div>
                     </div>
                     <div class="goal-jar-container">
-                        <div class="goal-fill" style="height: ${percent}%"></div>
+                        <div class="goal-fill" style="width:${percent}%"></div>
                     </div>
                     <div class="goal-stats">
                         <span>${this.formatCurrency(goal.saved)}</span>
                         <span>z ${this.formatCurrency(goal.amount)}</span>
                     </div>
-                    <div style="display: flex; gap: 8px; margin-top: 8px;">
-                        <button class="btn-secondary" style="padding: 10px; font-size: 12px;" onclick="ui.handleGoalDeposit(${goal.id})">+ PŘIDAT</button>
-                        <button class="btn-secondary" style="padding: 10px; font-size: 12px; color: var(--accent);" onclick="ui.handleGoalDelete(${goal.id})">SMAZAT</button>
+                    <div class="goal-actions">
+                        <button class="btn-secondary" onclick="ui.openGoalDepositModal(${goal.id})">+ PŘIDAT</button>
+                        <button class="btn-secondary danger" onclick="ui.handleGoalDelete(${goal.id})">SMAZAT</button>
                     </div>
                 </div>
             `;
         }).join('');
     },
 
-    handleGoalDeposit(id) {
-        const amount = prompt("Kolik chcete přidat do této pokladničky?");
-        if (amount && !isNaN(parseFloat(amount))) {
-            const goal = logic.data.goals.find(g => g.id === id);
-            if (goal) {
-                logic.updateGoalSaved(id, goal.saved + parseFloat(amount));
-                this.renderGoals();
-            }
-        }
-    },
-
     handleGoalDelete(id) {
-        if (confirm("Opravdu smazat tento cíl?")) {
-            logic.deleteGoal(id);
-            this.renderGoals();
+        logic.deleteGoal(id);
+        this.renderGoals();
+        this.showToast('Cíl smazán');
+    },
+
+    // ---- CLEAR DATA ----
+    clearData() {
+        if (confirm('Opravdu smazat všechna data?')) {
+            logic.clearData();
+            this.render();
+            this.showToast('Data smazána');
         }
     },
 
-    // --- CUSTOM CALENDAR LOGIC ---
+    // ---- TABS ----
+    switchTab(tabId) {
+        this.activeTab = tabId;
+        document.querySelectorAll('.tab-content').forEach(t => { t.classList.remove('active'); t.classList.add('hidden'); });
+        const target = document.getElementById('tab-' + tabId);
+        if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
+
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        const navEl = document.getElementById('nav-' + tabId);
+        if (navEl) navEl.classList.add('active');
+
+        if (tabId === 'charts') charts.init();
+        else if (tabId === 'goals') this.renderGoals();
+        else if (tabId === 'overview') this.render();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    // ---- CALENDAR ----
     openCalendar() {
         this.calendarViewDate = new Date(this.selectedDate);
         this.renderCalendar();
@@ -576,43 +563,25 @@ const ui = {
     },
 
     renderCalendar() {
-        const monthYearEl = document.getElementById('calendar-month-year');
-        const daysContainer = document.getElementById('calendar-days');
-        
+        const el = document.getElementById('calendar-month-year');
+        const grid = document.getElementById('calendar-days');
         const month = this.calendarViewDate.getMonth();
         const year = this.calendarViewDate.getFullYear();
-        
-        const monthNames = ["LEDEN", "ÚNOR", "BŘEZEN", "DUBEN", "KVĚTEN", "ČERVEN", "ČERVENEC", "SRPEN", "ZÁŘÍ", "ŘÍJEN", "LISTOPAD", "PROSINEC"];
-        monthYearEl.textContent = `${monthNames[month]} ${year}`;
-        
-        // Calculate days
-        const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 is Sunday
-        const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
-        
-        // Convert to European Monday-start (0=Po, 6=Ne)
-        let firstDayIdx = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-        
-        let html = '';
-        
-        // Empty slots for previous month
-        for (let i = 0; i < firstDayIdx; i++) {
-            html += '<div class="calendar-day empty"></div>';
-        }
-        
+        const monthNames = ['LEDEN', 'ÚNOR', 'BŘEZEN', 'DUBEN', 'KVĚTEN', 'ČERVEN', 'ČERVENEC', 'SRPEN', 'ZÁŘÍ', 'ŘÍJEN', 'LISTOPAD', 'PROSINEC'];
+        el.textContent = `${monthNames[month]} ${year}`;
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+        let firstDayIdx = firstDay === 0 ? 6 : firstDay - 1;
         const today = new Date();
-        
-        for (let i = 1; i <= lastDateOfMonth; i++) {
+        let html = '';
+        for (let i = 0; i < firstDayIdx; i++) html += '<div class="calendar-day empty"></div>';
+        for (let i = 1; i <= lastDate; i++) {
             const isToday = today.getDate() === i && today.getMonth() === month && today.getFullYear() === year;
-            const isSelected = this.selectedDate.getDate() === i && this.selectedDate.getMonth() === month && this.selectedDate.getFullYear() === year;
-            
-            html += `
-                <div class="calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" onclick="ui.selectCalendarDate(${i})">
-                    ${i}
-                </div>
-            `;
+            const isSel = this.selectedDate.getDate() === i && this.selectedDate.getMonth() === month && this.selectedDate.getFullYear() === year;
+            html += `<div class="calendar-day ${isToday ? 'today' : ''} ${isSel ? 'selected' : ''}" onclick="ui.selectCalendarDate(${i})">${i}</div>`;
         }
-        
-        daysContainer.innerHTML = html;
+        grid.innerHTML = html;
     },
 
     selectCalendarDate(day) {
@@ -622,13 +591,6 @@ const ui = {
         this.render();
     },
 
-    prevCalendarMonth() {
-        this.calendarViewDate.setMonth(this.calendarViewDate.getMonth() - 1);
-        this.renderCalendar();
-    },
-
-    nextCalendarMonth() {
-        this.calendarViewDate.setMonth(this.calendarViewDate.getMonth() + 1);
-        this.renderCalendar();
-    }
+    prevCalendarMonth() { this.calendarViewDate.setMonth(this.calendarViewDate.getMonth() - 1); this.renderCalendar(); },
+    nextCalendarMonth() { this.calendarViewDate.setMonth(this.calendarViewDate.getMonth() + 1); this.renderCalendar(); }
 };

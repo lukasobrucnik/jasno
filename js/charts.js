@@ -1,194 +1,181 @@
+/* =============================================
+   JASNO. — charts.js
+   Grafy v monochromatic stylu
+============================================= */
 const charts = {
     trendChart: null,
     categoryChart: null,
 
     init() {
-        this.renderTrendChart();
-        this.renderCategoryChart();
-        this.updatePrediction();
+        this.renderTrend();
+        this.renderCategory();
+        this.renderPrediction();
     },
 
-    renderTrendChart() {
-        const ctx = document.getElementById('trendChart').getContext('2d');
-        if (this.trendChart) this.trendChart.destroy();
+    renderPrediction() {
+        const warning = document.getElementById('prediction-warning');
+        const text = document.getElementById('prediction-text');
+        if (!warning || !text) return;
 
-        // Get monthly balance development for the current YEAR
-        const labels = ["Led", "Úno", "Bře", "Dub", "Kvě", "Čer", "Čec", "Srp", "Zář", "Říj", "Lis", "Pro"];
-        const data = [];
-        const ref = ui.selectedDate || new Date();
+        const ref = ui.selectedDate;
+        const predicted = logic.getPredictedMonthEnd(ref);
+        const budget = logic.getNetIncome(ref) - logic.getFixedMonthlyTotal(ref);
+        const dayOfMonth = ref.getDate();
+        const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+
+        if (dayOfMonth < 3 || budget <= 0) { warning.classList.add('hidden'); return; }
+
+        if (predicted > budget * 1.1) {
+            warning.classList.remove('hidden');
+            const overshoot = Math.round(predicted - budget);
+            text.textContent = `Při tomto tempu přesáhneš rozpočet o ${ui.formatCurrency(overshoot)}.`;
+        } else {
+            warning.classList.add('hidden');
+        }
+    },
+
+    renderTrend() {
+        const canvas = document.getElementById('trendChart');
+        if (!canvas) return;
+
+        if (this.trendChart) { this.trendChart.destroy(); this.trendChart = null; }
+
+        const ref = ui.selectedDate;
         const year = ref.getFullYear();
-        
+        const labels = [];
+        const data = [];
+
         for (let m = 0; m < 12; m++) {
-            const d = new Date(year, m, 1);
-            const balance = logic.getRemainingTotal(d);
-            data.push(balance);
+            const monthDate = new Date(year, m, 1);
+            const shortNames = ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čer', 'Čec', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'];
+            labels.push(shortNames[m]);
+            data.push(Math.round(logic.getMonthlyTotalSpent(monthDate)));
         }
 
+        const ctx = canvas.getContext('2d');
         this.trendChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
-                labels: labels,
+                labels,
                 datasets: [{
-                    label: 'Měsíční zůstatek',
-                    data: data,
-                    borderColor: '#ffffff',
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: (context) => {
-                        const m = context.dataIndex;
-                        return m === ref.getMonth() ? '#ffffff' : 'rgba(255,255,255,0.2)';
-                    },
-                    fill: true,
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    tension: 0.3
+                    label: 'Výdaje',
+                    data,
+                    backgroundColor: data.map((_, i) => i === ref.getMonth() ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.15)'),
+                    borderRadius: 4,
+                    borderSkipped: false,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { 
+                plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#111',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
+                        backgroundColor: 'rgba(10,10,10,0.95)',
                         borderColor: 'rgba(255,255,255,0.1)',
                         borderWidth: 1,
-                        displayColors: false,
+                        titleColor: 'rgba(255,255,255,0.5)',
+                        bodyColor: '#fff',
+                        padding: 10,
                         callbacks: {
-                            label: (context) => `${context.parsed.y.toLocaleString('cs-CZ')} Kč`
+                            label: ctx => ui.formatCurrency(ctx.parsed.y)
                         }
                     }
                 },
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } }
+                        ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 10 } },
+                        border: { display: false }
                     },
                     y: {
                         grid: { color: 'rgba(255,255,255,0.05)' },
-                        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } }
+                        ticks: {
+                            color: 'rgba(255,255,255,0.3)',
+                            font: { size: 10 },
+                            callback: v => v === 0 ? '' : (v / 1000) + 'k'
+                        },
+                        border: { display: false }
                     }
                 }
             }
         });
     },
 
-    renderCategoryChart() {
-        const ctx = document.getElementById('categoryChart').getContext('2d');
-        if (this.categoryChart) this.categoryChart.destroy();
+    renderCategory() {
+        const canvas = document.getElementById('categoryChart');
+        if (!canvas) return;
+        if (this.categoryChart) { this.categoryChart.destroy(); this.categoryChart = null; }
 
-        const categories = {};
-        const ref = ui.selectedDate || new Date();
+        const ref = ui.selectedDate;
         const m = ref.getMonth();
         const y = ref.getFullYear();
-        const daysInMonth = new Date(y, m + 1, 0).getDate();
-
-        // 1. Přidat variabilní transakce
-        logic.data.transactions.forEach(tx => {
-            const d = new Date(tx.date);
-            if (d.getMonth() === m && d.getFullYear() === y) {
-                const cat = tx.category || 'other';
-                categories[cat] = (categories[cat] || 0) + tx.amount;
-            }
+        const txs = logic.data.transactions.filter(t => {
+            const d = new Date(t.date);
+            return d.getMonth() === m && d.getFullYear() === y;
         });
 
-        // 2. Přidat fixní výdaje pro daný měsíc
-        const config = logic.getMonthlyConfig(ref);
-        config.fixedExpenses.forEach(fx => {
-            let amount = fx.amount;
-            if (fx.frequency === 'daily') amount *= daysInMonth;
-            else if (fx.frequency === 'weekly') amount *= (daysInMonth / 7);
-            
-            const label = `FIXNÍ: ${fx.name.toUpperCase()}`;
-            categories[label] = (categories[label] || 0) + amount;
+        if (txs.length === 0) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            return;
+        }
+
+        const catMap = {};
+        txs.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+
+        const catNames = { food: 'Jídlo', coffee: 'Káva', transport: 'Doprava', entertainment: 'Zábava', health: 'Zdraví', other: 'Ostatní' };
+        const labels = Object.keys(catMap).map(k => {
+            const custom = logic.data.customCategories.find(c => c.id === k);
+            return custom ? custom.name : (catNames[k] || k);
         });
+        const values = Object.values(catMap);
 
-        const labels = Object.keys(categories).map(c => {
-            if (c.startsWith('FIXNÍ:')) return c;
-            const custom = logic.data.customCategories.find(cc => cc.id === c);
-            if (custom) return custom.name;
-            const basics = { food: 'Jídlo', coffee: 'Káva', transport: 'Doprava', other: 'Ostatní' };
-            return basics[c] || c;
-        });
-        const data = Object.values(categories);
+        // Monochromatic grays
+        const grays = ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.65)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.18)', 'rgba(255,255,255,0.1)'];
 
-        // Nothing-style colors (high contrast monochrome)
-        const nothingColors = [
-            '#ffffff',           // Čistě bílá
-            'rgba(255,255,255,0.6)', // Světle šedá
-            'rgba(255,255,255,0.3)', // Středně šedá
-            'rgba(255,255,255,0.1)', // Tmavě šedá
-            '#ff3b30'            // Nothing Red (pro kontrast)
-        ];
-
+        const ctx = canvas.getContext('2d');
         this.categoryChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: labels,
+                labels,
                 datasets: [{
-                    data: data,
-                    backgroundColor: nothingColors,
-                    borderColor: '#000000',
+                    data: values,
+                    backgroundColor: labels.map((_, i) => grays[i % grays.length]),
+                    borderColor: 'rgba(0,0,0,0.3)',
                     borderWidth: 2,
-                    hoverOffset: 10
+                    hoverOffset: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '75%', // Tenký prstenec
-                plugins: { 
-                    legend: { 
+                cutout: '68%',
+                plugins: {
+                    legend: {
                         position: 'bottom',
                         labels: {
-                            color: 'rgba(255,255,255,0.7)',
-                            padding: 20,
-                            font: { size: 12, family: 'Inter' },
-                            usePointStyle: true
+                            color: 'rgba(255,255,255,0.5)',
+                            font: { size: 10 },
+                            padding: 14,
+                            boxWidth: 10,
+                            boxHeight: 10,
+                            borderRadius: 2
                         }
                     },
                     tooltip: {
-                        backgroundColor: '#111',
+                        backgroundColor: 'rgba(10,10,10,0.95)',
                         borderColor: 'rgba(255,255,255,0.1)',
                         borderWidth: 1,
+                        titleColor: 'rgba(255,255,255,0.5)',
+                        bodyColor: '#fff',
+                        padding: 10,
                         callbacks: {
-                            label: (context) => {
-                                const val = context.parsed;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const pct = ((val / total) * 100).toFixed(1);
-                                return ` ${context.label}: ${val.toLocaleString('cs-CZ')} Kč (${pct}%)`;
-                            }
+                            label: ctx => ` ${ui.formatCurrency(ctx.parsed)}`
                         }
                     }
                 }
             }
         });
-    },
-    updatePrediction() {
-        const warning = document.getElementById('prediction-warning');
-        const text = document.getElementById('prediction-text');
-        
-        const ref = ui.selectedDate || new Date();
-        const remaining = logic.getRemainingTotal(ref);
-        const days = logic.getDaysRemainingInMonth(ref);
-        const spent = logic.getMonthlyTotalSpent(ref);
-        
-        // Calculate day index for avg (if viewing past month, use last day)
-        const today = new Date();
-        let dayIdx = ref.getDate();
-        if (ref.getMonth() !== today.getMonth() || ref.getFullYear() !== today.getFullYear()) {
-            dayIdx = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
-        }
-
-        const avgSpent = spent / dayIdx;
-        const dailyLimit = days > 0 ? remaining / days : 0;
-        
-        if (dailyLimit < avgSpent * 0.7 && remaining < (logic.getNetIncome(ref) * 0.2)) {
-            warning.classList.remove('hidden');
-            text.textContent = `Pozor: Při současném tempu rozpočet nevystačí. Zbývající denní limit: ${Math.floor(dailyLimit)} Kč.`;
-        } else {
-            warning.classList.add('hidden');
-        }
     }
 };
