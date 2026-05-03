@@ -284,7 +284,6 @@ const charts = {
                 const arc0 = meta.data[0];
                 if (!arc0) return;
                 const cx = arc0.x, cy = arc0.y;
-                const innerR = arc0.innerRadius;
 
                 ctx.save();
                 ctx.textAlign = 'center';
@@ -299,38 +298,13 @@ const charts = {
                     const headerColor = isBlue ? 'rgba(128,168,255,0.6)' : 'rgba(255,188,80,0.6)';
                     const totalColor  = isBlue ? '#80A8FF' : '#FFBC50';
 
-                    // Header label
                     ctx.font = `600 9px Inter, sans-serif`;
                     ctx.fillStyle = headerColor;
-                    ctx.fillText(group.label.toUpperCase(), cx, cy - innerR * 0.52);
+                    ctx.fillText(group.label.toUpperCase(), cx, cy - 10);
 
-                    // Total amount
-                    ctx.font = `700 13px Inter, sans-serif`;
+                    ctx.font = `700 14px Inter, sans-serif`;
                     ctx.fillStyle = totalColor;
-                    ctx.fillText(ui.formatCurrency(groupTotal), cx, cy - innerR * 0.22);
-
-                    // Item list (up to 5)
-                    const items = group.indices.slice(0, 5);
-                    const lineH = Math.min(13, (innerR * 0.9) / (items.length + 1));
-                    const startY = cy + innerR * 0.1;
-                    ctx.font = `400 9px Inter, sans-serif`;
-                    items.forEach((i, n) => {
-                        const iy = startY + n * lineH;
-                        // name
-                        ctx.textAlign = 'left';
-                        ctx.fillStyle = 'rgba(255,255,255,0.55)';
-                        const maxW = innerR * 0.85;
-                        ctx.fillText(labels[i], cx - maxW / 2, iy);
-                        // amount right-aligned
-                        ctx.textAlign = 'right';
-                        ctx.fillStyle = 'rgba(255,255,255,0.75)';
-                        ctx.fillText(ui.formatCurrency(values[i]), cx + maxW / 2, iy);
-                    });
-                    if (group.indices.length > 5) {
-                        ctx.textAlign = 'center';
-                        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-                        ctx.fillText(`+ ${group.indices.length - 5} další`, cx, startY + 5 * lineH);
-                    }
+                    ctx.fillText(ui.formatCurrency(groupTotal), cx, cy + 9);
                 } else {
                     // Default: total spent this month
                     const spentTotal = values.filter((_, i) => labels[i] !== 'Zbývá').reduce((s, v) => s + v, 0);
