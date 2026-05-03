@@ -597,8 +597,15 @@ const ui = {
         }
     },
 
+    selectChartMonth(monthIndex) {
+        const year = this.selectedDate.getFullYear();
+        this.selectedDate = new Date(year, monthIndex, 1);
+        this.render();
+    },
+
     // ---- TABS ----
     switchTab(tabId) {
+        this.selectedDate = new Date();
         this.activeTab = tabId;
         document.querySelectorAll('.tab-content').forEach(t => { t.classList.remove('active'); t.classList.add('hidden'); });
         const target = document.getElementById('tab-' + tabId);

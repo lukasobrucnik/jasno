@@ -97,6 +97,14 @@ const charts = {
                             borderRadius: 2,
                         }
                     },
+                    subtitle: {
+                        display: true,
+                        text: '↑ klikni na sloupec pro přepnutí měsíce',
+                        color: 'rgba(255,255,255,0.18)',
+                        font: { size: 9, style: 'normal' },
+                        padding: { bottom: 6 },
+                        align: 'start',
+                    },
                     tooltip: {
                         backgroundColor: 'rgba(10,10,10,0.95)',
                         borderColor: 'rgba(255,255,255,0.1)',
@@ -108,6 +116,14 @@ const charts = {
                             label: ctx => ` ${ctx.dataset.label}: ${ui.formatCurrency(ctx.parsed.y)}`
                         }
                     }
+                },
+                onClick(_event, elements) {
+                    if (elements.length > 0) {
+                        ui.selectChartMonth(elements[0].index);
+                    }
+                },
+                onHover(event, elements) {
+                    event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
                 },
                 scales: {
                     x: {
@@ -298,13 +314,32 @@ const charts = {
                     const headerColor = isBlue ? 'rgba(128,168,255,0.6)' : 'rgba(255,188,80,0.6)';
                     const totalColor  = isBlue ? '#80A8FF' : '#FFBC50';
 
+                    const itemCount = group.indices.length;
+                    const lineH = 13;
+                    const totalH = lineH + lineH + itemCount * lineH;
+                    let ty = cy - totalH / 2 + lineH * 0.5;
+
                     ctx.font = `600 9px Inter, sans-serif`;
                     ctx.fillStyle = headerColor;
-                    ctx.fillText(group.label.toUpperCase(), cx, cy - 10);
+                    ctx.fillText(group.label.toUpperCase(), cx, ty);
+                    ty += lineH;
 
-                    ctx.font = `700 14px Inter, sans-serif`;
+                    ctx.font = `700 13px Inter, sans-serif`;
                     ctx.fillStyle = totalColor;
-                    ctx.fillText(ui.formatCurrency(groupTotal), cx, cy + 9);
+                    ctx.fillText(ui.formatCurrency(groupTotal), cx, ty);
+                    ty += lineH * 1.2;
+
+                    ctx.font = `400 9px Inter, sans-serif`;
+                    const maxW = arc0.innerRadius * 1.6;
+                    group.indices.forEach(i => {
+                        ctx.textAlign = 'left';
+                        ctx.fillStyle = 'rgba(255,255,255,0.50)';
+                        ctx.fillText(labels[i], cx - maxW / 2, ty);
+                        ctx.textAlign = 'right';
+                        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+                        ctx.fillText(ui.formatCurrency(values[i]), cx + maxW / 2, ty);
+                        ty += lineH;
+                    });
                 } else {
                     // Default: total spent this month
                     const spentTotal = values.filter((_, i) => labels[i] !== 'Zbývá').reduce((s, v) => s + v, 0);
@@ -352,17 +387,7 @@ const charts = {
                             filter: item => item.text !== 'Zbývá' || remaining > 0
                         }
                     },
-                    tooltip: {
-                        backgroundColor: 'rgba(10,10,10,0.95)',
-                        borderColor: 'rgba(255,255,255,0.1)',
-                        borderWidth: 1,
-                        titleColor: 'rgba(255,255,255,0.5)',
-                        bodyColor: '#fff',
-                        padding: 10,
-                        callbacks: {
-                            label: ctx => ` ${ui.formatCurrency(ctx.parsed)}`
-                        }
-                    }
+                    tooltip: { enabled: false }
                 }
             }
         });
